@@ -30,7 +30,7 @@ const supabase = createClient(
 
 
 function getToken() {
-  return localStorage.getItem(storageKey);
+  return JSON.parse(localStorage.getItem(storageKey));
 }
 
 /**

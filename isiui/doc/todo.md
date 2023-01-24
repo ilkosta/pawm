@@ -10,6 +10,6 @@
   - [x] **uso di https://github.com/alex-tan/postgrest-queries** invece che https://github.com/alex-tan/postgrest-clien, perche' permette la costruzione degli url/query in modo tipizzato, lasciando l'utilizzo standard dell'HTTP di Elm : piu' flessibile
 - [x] abilitare Google Auth
 - [x] valutare l'integrazione di https://github.com/davidtheclark/cosmiconfig: non serve visti gli aggiornamenti di supabase-cli
-- [ ] testare il caricamento del token da localstorage
+- [x] testare il caricamento del token da localstorage
   - il formato del token cambia tra una versione e l'altra di supabase... :(
   

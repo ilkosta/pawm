@@ -80,7 +80,7 @@ init flags url navKey =
     let
 
       viewer = 
-        Decode.decodeValue (Decode.field "api_url" Api.viewerDecoder) flags    
+        Decode.decodeValue (Decode.field "viewer" Api.viewerDecoder) flags    
         |> Result.toMaybe
 
       apiUrl = 
