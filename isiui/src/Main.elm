@@ -1,0 +1,326 @@
+module Main exposing (main)
+
+import Browser exposing (Document, UrlRequest)
+import Browser.Navigation as Nav
+import Url exposing (Url)
+
+import Json.Decode as Decode
+
+import Html exposing (..)
+
+import Page.InfoSystem.List as ListInfoSys
+import Page.InfoSystem.Edit as ISEdit
+import Route exposing (Route)
+import Session.Session as Session
+import Session.Viewer as Viewer
+import Session.Cred as Cred
+import Api
+import Utils.Url
+
+
+{-| NAVIGATION FLOW
+
+after INIT FLOW
+
+* the runtime intercept a msg from the specific page (es. change url)
+* send the message to `update` where the internal link is converted to the `Url` type and added as a payload to the message
+* the update ask to push the url to create a command for changing the url in the browser's address bar
+* The browser notify the address bar change
+* the runtime convert the new address in `Url` type and add it as a payload to `UrlChanged` message to `update`
+* the update extract the route from the Url
+* the update determine which page to display basend on the new route and store that in the page field
+* the runtime see the model change and call `view`
+...
+-}
+
+main : Program Decode.Value Model Msg
+main =
+    Browser.application
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = subscriptions
+        , onUrlRequest = LinkClicked
+        , onUrlChange = UrlChanged
+        }
+
+type alias Model =
+    { route : Route     -- current route
+    , page : Page       -- current page
+    , session : Session.Model
+    }
+
+
+type Page
+    = NotFoundPage
+    | HomePage
+    | ListPage ListInfoSys.Model  
+    | ISEditPage ISEdit.Model      
+
+---- INIT
+
+{-| INIT FLOW
+
+* the Browser send the full URL entered by the user in address bar to the runtime
+* the Runtime convert the full URL to the `Url` type and send it to `init`
+* `init` extract the route from the `Url`
+* determine which page to display based on the current route and store that in the page filed
+* return a fully initialized main model to the runtime
+
+`init` fn have two responsibilities:
+
+* Initialize the main model
+* Initialize the current page
+
+For the first extract a route from url and store it in the route model field
+For the second it call `initCurrentPage`
+  -}
+init : Decode.Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url navKey =
+    let
+      strFlags =  
+        -- se e' presente una stringa di inizializzazione tra i flag
+        Decode.decodeValue Decode.string flags 
+
+      _ = Result.toMaybe strFlags
+        |> Maybe.withDefault "!! errore in parsing dei flags di inizzializzazione !!"
+        |> Debug.log "flags ricevuti: " 
+
+      viewer = 
+        strFlags        
+        -- provo a decodificarlo come viewer
+        |> Result.andThen (Decode.decodeString (Api.storageDecoder Viewer.decoder))
+        |> Result.toMaybe
+
+      apiUrl = 
+        Decode.decodeValue Session.apiUrlDecoder flags 
+        |> Result.toMaybe
+        |> Maybe.withDefault Utils.Url.emptyUrl
+
+      _ = Debug.log "ricevuto l'api_url: " <| Url.toString apiUrl
+
+      session = Session.fromViewer apiUrl navKey viewer
+      model =
+          { route = Route.parseUrl url
+          , page = NotFoundPage -- FIXME: antipattern: fallback to 404
+          , session = session
+          }
+    in
+    initCurrentPage ( model, Cmd.none )    
+
+
+
+{-| To properly manage the interaction between pages
+
+     The Main module doesn’t handle any page specific messages. 
+     It simply forwards them to the correct page module.
+
+     The page commands are designed to send a page specific message after they are executed
+     Although each page is capable of creating its own commands, it can’t fire them off to the Elm runtime. 
+     That responsibility lies with the Main module.
+
+     The Main module doesn't know the internal details of page command or msg
+     It only know that the page manage some messages
+     (see `initCurrentPage` comments for the Msg remapping/construction)
+-}
+type Msg
+    = LinkClicked UrlRequest
+    | UrlChanged Url
+    ---- 
+    | ListPageMsg ListInfoSys.Msg 
+    | ISEditPageMsg ISEdit.Msg
+    
+
+
+
+{-| Determine which page to display based on route.
+
+    Takes the main model and any commands we may want to fire 
+    when the app is being initialized, and 
+    ask the page to return 
+    * its model by calling its init function
+    * a Main Msg data constructor remapped from the page Msg (see `Msg` comments)
+-}
+initCurrentPage : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+initCurrentPage ( model, existingCmds ) =
+    let
+        ( currentPage, mappedPageCmds ) =
+            case model.route of
+
+                --- simple view pages --------
+                Route.NotFound ->
+                    ( NotFoundPage, Cmd.none )
+
+                Route.Home ->
+                  ( HomePage, Cmd.none )
+                -----------------------------
+
+                Route.ISList ->
+                    let
+                        ( pageModel, pageCmds ) =
+                            ListInfoSys.init model.session
+                    in
+                    ( ListPage pageModel, Cmd.map ListPageMsg pageCmds )
+
+                Route.ISEdit sysid ->
+                  case Session.viewer model.session.session of
+                    Nothing -> 
+                      (HomePage, Api.login ())
+                    Just _ ->
+                      let
+                          ( pageModel, pageCmd ) =
+                              ISEdit.init sysid model.session
+                      in
+                      ( ISEditPage pageModel, Cmd.map ISEditPageMsg pageCmd )
+                    
+                
+    in
+    ( { model | page = currentPage }
+    , Cmd.batch [ existingCmds, mappedPageCmds ]
+    )    
+
+
+---- VIEW the correct page
+
+{-| VIEW FLOW
+
+every time the runtime see a change on the model (ex. init flow)
+it call the view
+
+* the runtime get view code 
+* the view code on Main call the view code on the specific page
+* the page messages generated from html are transformed on main msg
+* the view code is returned to the runtime 
+
+
+  Delegate the reposibility for displaying the page to the specific page-view
+
+  as with the page Commands encapsuletion in `initCurrentPage`
+  here the messages produced by the Page Html are remapped Main Msg
+-}
+view : Model -> Document Msg
+view model =
+    { title = "ISI App"
+    , body = [ currentView model ]
+    }
+
+currentView : Model -> Html Msg
+currentView model =
+    case model.page of
+        NotFoundPage ->
+            notFoundView
+        
+        HomePage -> 
+          homePageView
+
+        ListPage pageModel ->
+            ListInfoSys.view pageModel
+                |> Html.map ListPageMsg
+
+        ISEditPage pageModel ->
+          ISEdit.view pageModel
+            |> Html.map ISEditPageMsg
+
+
+notFoundView : Html msg
+notFoundView =
+    h3 [] [ text "Oops! Pagina non trovata!" ]    
+
+homePageView: Html msg
+homePageView =
+    h3 [] [ text "questa e' la home" ]    
+
+
+---- UPDATE the page model   
+
+
+{-| forward the responsibility for the update to the correct page
+
+    The Main module isn’t responsible for updating page models. 
+    That responsibility lies with page modules. 
+    That’s why we need to call a page specific update function to get 
+    an updated page model and a new list of page commands.
+
+    The Page specfic Msg and Model are unwrapped by pattern matching with the Main Msg and Page
+-}
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case ( msg, model.page ) of
+        -----------------------------
+        -- generic navigation flow
+        ( LinkClicked urlRequest, _ ) ->
+            case urlRequest of
+                -- internal: same protocol, host name, and port number
+                Browser.Internal url ->
+                  let
+                    navkey = Session.navKey model.session.session
+                    urlStr = Url.toString url
+                  in
+                    ( model
+                    , Nav.pushUrl navkey urlStr
+                    )
+
+                Browser.External url ->
+                    ( model
+                    , Nav.load url
+                    )
+
+        ( UrlChanged url, _ ) ->
+            let
+                newRoute =
+                    Route.parseUrl url
+            in
+            ( { model | route = newRoute }, Cmd.none )
+                |> initCurrentPage
+        -----------------------------
+
+        -----------------------------
+        -- page mapping
+        ( ListPageMsg subMsg, ListPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    ListInfoSys.update subMsg pageModel
+            in
+            ( { model | page = ListPage updatedPageModel }
+            , Cmd.map ListPageMsg updatedCmd
+            )
+        -----------------------------
+
+
+        ( _, _ ) -> -- FIXME: antipattern: hide compiler checks - maybe ok for initials fast iterations... 
+            ( model, Cmd.none )
+
+
+
+
+
+--- SUBSCRIPTION
+
+
+{-| 
+Subscriptions scope:
+
+- listen to an event generated by a Javascript code
+- encode the event to a message
+- send the message to `update`
+
+Subscriptions allow us to listen to external events such as incoming WebSocket messages, 
+clock tick events, mouse/keyboard events, geolocation changes, 
+and an output generated by a JavaScript library.
+
+Subscription ask the Elm runtime to listen for the specified event 
+and then send the corresponding message to update the model
+-}
+
+subscriptions : Model -> Sub Msg
+subscriptions model = 
+  case model.page of
+    NotFoundPage ->
+        Sub.none
+    
+    ListPage m -> 
+      Sub.map ListPageMsg (ListInfoSys.subscriptions m)
+      
+    _ -> Sub.none
+
+

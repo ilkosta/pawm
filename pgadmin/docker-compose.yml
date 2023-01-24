@@ -1,0 +1,19 @@
+version: '2.1'
+
+services:
+  pgadmin:
+    #image: fenglc/pgadmin4
+    image: dpage/pgadmin4
+    env_file: .env_pgadm
+    volumes:
+      - ./data:/data
+      - ./var:/var/lib/pgadmin
+      #- ./config_local.py:/pgadmin4/config_local.py:ro
+    ports:
+      - 4325:80
+    networks:
+      - supabase_network_dev
+
+networks:
+  supabase_network_dev:
+    external: true

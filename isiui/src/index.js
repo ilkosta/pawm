@@ -1,0 +1,104 @@
+import './main.css';
+import { Elm } from './Main.elm';
+import * as serviceWorker from './serviceWorker';
+import { createClient } from '@supabase/supabase-js';
+// import "./bootstrap-italia_v203/js/bootstrap-italia.bundle.min.js";
+// import 'bootstrap-italia';
+
+const storageKey = "sb-localhost-auth-token";
+
+const options = {
+  schema: 'public',
+  headers: { 'x-my-custom-header': 'ISI' },
+  autoRefreshToken: true,
+  persistSession: true,
+  detectSessionInUrl: true,
+  // Optional key name used for storing tokens in local storage.
+  storageKey: storageKey
+};
+
+const supabase = createClient(
+  'http://localhost:54321',
+  // "http://localhost:3000",
+  // public anonymous key of the supabase project (from dashboard)
+  // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU",
+  options
+);
+
+
+
+
+function getToken() {
+  return localStorage.getItem(storageKey);
+}
+
+/**
+ * storage mechanics:
+ * 1- when Elm starts up, we pass the current value of `localStorge` via flags
+ * 2- the app subscribe to `save` port for events from Elm
+ * 3- when the Elm app sends a `save` event, we store the data in `localStorage` 
+ *    and reload the storage state on the Elm side
+ * 
+ * see src/Storage.elm for the Elm side
+ */
+
+// laoding of the localStorage at start up
+function initElm() {
+  let flags = { viewer: getToken(), api_url: "http://localhost:54321/rest/v1/" };
+  console.log(`flags di inizializzazione: ${JSON.stringify(flags)}`);
+  return Elm.Main.init({ node: document.getElementById('root'), flags: flags });
+}
+
+const app = initElm();
+
+
+function renewToken() {
+
+  if (!getToken())
+    return;
+
+  // TODO : renew token
+  token = "";
+  // store in localstorage
+  localStorage.setItem(storageKey, token);
+  // load in Elm the renewd token
+  app.ports.onStoreChange.send(token);
+}
+
+var now = new Date().getTime();
+if (getToken() && getToken().expires_at > now) {
+  // `flags.expires_at` is float value representing the number of seconds since epoch into a Posix.
+  // 300000 = 1000 millisecondi * 60 secondi * 5 minuti
+  let renew_at = getToken().expires_at - 300000; // 5 minuti
+  setTimeout(renewtoken, renew_at - now);
+}
+
+
+app.ports.login.subscribe(async () => {
+  console.log("invoco login...");
+  const { user, session, error } = await supabase.auth.signInWithOAuth({
+    // provider can be 'github', 'google', 'gitlab', and more
+    provider: 'google',
+  });
+  if (error) {
+    let msgerr = "";
+    if (error.response === undefined) {
+      msgerr += "error from the auth server without error.response\n";
+    } else {
+      msgerr += `response from the auth server: ${error.response}\n`;
+    }
+
+    if (error.status === undefined) {
+      msgerr += "error from the auth server without status code\n";
+    } else {
+      msgerr += `error from the auth server with the status code: ${error.status}\n`;
+    }
+    console.error(msgerr);
+  }
+});
+
+// If you want your app to work offline and load faster, you can change
+// unregister() to register() below. Note this comes with some pitfalls.
+// Learn more about service workers: https://bit.ly/CRA-PWA
+serviceWorker.unregister();

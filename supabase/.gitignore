@@ -1,0 +1,8 @@
+# Supabase
+.branches
+.temp
+
+rubrica_personale.seeds.sql
+seed.sql
+address_book.seeds.sql
+
