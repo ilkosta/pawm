@@ -30,7 +30,6 @@ type alias Model =
 type Msg
     = FetchInfosystems
     | InfosysReceived (WebData DT)
-    | GotSession Session.Session
     
 
 
@@ -73,14 +72,7 @@ update msg model =
         InfosysReceived data ->
             ( { model | data = data }, Cmd.none )
         
-        GotSession session ->
-          let
-            s_ = model.session
-            s = {s_ | session = session}
-          in
-            ( { model | session = s }
-            , Route.pushUrl Route.Home (Session.navKey model.session.session)
-            ) 
+
 
 
 
@@ -190,5 +182,5 @@ and then send the corresponding message to update the model
 -}
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-  Api.sessionChanges GotSession model.session (Session.navKey model.session.session)
+subscriptions _ =
+  Sub.none

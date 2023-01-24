@@ -1,0 +1,15 @@
+- [x] verifica xss
+  - [x] verifica della possibilita' di xss tramite API
+  - [x] verifica della possibilita' di xss tramite semplice form elm
+- [x] valutare come usare le api postgres, se tramite libreria o via http
+  - [x] https://github.com/alex-tan/postgrest-client: macchinoso
+  - [x] https://github.com/maca/postgrest-admin     : interessante ma fuori contesto
+  - [x] https://github.com/john-kelly/elm-postgrest : sembra semplice nell'utilizzo ma
+    - non piu' mantenuto
+    - non aggiornato a elm 0.19.1
+  - [x] **uso di https://github.com/alex-tan/postgrest-queries** invece che https://github.com/alex-tan/postgrest-clien, perche' permette la costruzione degli url/query in modo tipizzato, lasciando l'utilizzo standard dell'HTTP di Elm : piu' flessibile
+- [x] abilitare Google Auth
+- [x] valutare l'integrazione di https://github.com/davidtheclark/cosmiconfig: non serve visti gli aggiornamenti di supabase-cli
+- [ ] testare il caricamento del token da localstorage
+  - il formato del token cambia tra una versione e l'altra di supabase... :(
+  

@@ -78,26 +78,15 @@ For the second it call `initCurrentPage`
 init : Decode.Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url navKey =
     let
-      strFlags =  
-        -- se e' presente una stringa di inizializzazione tra i flag
-        Decode.decodeValue Decode.string flags 
-
-      _ = Result.toMaybe strFlags
-        |> Maybe.withDefault "!! errore in parsing dei flags di inizzializzazione !!"
-        |> Debug.log "flags ricevuti: " 
 
       viewer = 
-        strFlags        
-        -- provo a decodificarlo come viewer
-        |> Result.andThen (Decode.decodeString (Api.storageDecoder Viewer.decoder))
+        Decode.decodeValue (Decode.field "api_url" Api.viewerDecoder) flags    
         |> Result.toMaybe
 
       apiUrl = 
         Decode.decodeValue Session.apiUrlDecoder flags 
         |> Result.toMaybe
         |> Maybe.withDefault Utils.Url.emptyUrl
-
-      _ = Debug.log "ricevuto l'api_url: " <| Url.toString apiUrl
 
       session = Session.fromViewer apiUrl navKey viewer
       model =
@@ -126,7 +115,9 @@ init flags url navKey =
 type Msg
     = LinkClicked UrlRequest
     | UrlChanged Url
-    ---- 
+    ---- js events
+    | GotSession Session.Model
+    ---- page events
     | ListPageMsg ListInfoSys.Msg 
     | ISEditPageMsg ISEdit.Msg
     
@@ -273,7 +264,28 @@ update msg model =
             ( { model | route = newRoute }, Cmd.none )
                 |> initCurrentPage
         -----------------------------
+        ( GotSession session, _ ) ->
+            -- forward the updated model.session 
+            -- to the current model.page
+            let
+                updatePageSession : ({m | session : Session.Model} -> Page) -> {m | session : Session.Model} -> Page
+                updatePageSession p m_ =
+                  let
+                     m = {m_ | session = session} 
+                  in
+                  p m
 
+                updatedPage : Page
+                updatedPage = 
+                  case model.page of
+                    ListPage    m -> updatePageSession ListPage   m
+                    ISEditPage  m -> updatePageSession ISEditPage m
+                    _ -> model.page
+
+                
+            in            
+            ( {model | session = session , page = updatedPage }, Cmd.none) 
+            
         -----------------------------
         -- page mapping
         ( ListPageMsg subMsg, ListPage pageModel ) ->
@@ -287,9 +299,9 @@ update msg model =
         -----------------------------
 
 
+
         ( _, _ ) -> -- FIXME: antipattern: hide compiler checks - maybe ok for initials fast iterations... 
             ( model, Cmd.none )
-
 
 
 
@@ -314,13 +326,25 @@ and then send the corresponding message to update the model
 
 subscriptions : Model -> Sub Msg
 subscriptions model = 
-  case model.page of
-    NotFoundPage ->
-        Sub.none
-    
-    ListPage m -> 
-      Sub.map ListPageMsg (ListInfoSys.subscriptions m)
+  let
+      tokenUpdate msg = 
+        Api.sessionChanges msg model.session 
+          (Session.navKey model.session.session)
       
-    _ -> Sub.none
+      pagesMgs = 
+        case model.page of
+          NotFoundPage ->
+              Sub.none
+          
+          ListPage m -> 
+            Sub.map ListPageMsg (ListInfoSys.subscriptions m)
+            
+          _ -> Sub.none
+  in
+  
+  Sub.batch
+  [ tokenUpdate GotSession , pagesMgs]
+
+  
 
 
