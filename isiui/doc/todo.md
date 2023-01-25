@@ -12,4 +12,10 @@
 - [x] valutare l'integrazione di https://github.com/davidtheclark/cosmiconfig: non serve visti gli aggiornamenti di supabase-cli
 - [x] testare il caricamento del token da localstorage
   - il formato del token cambia tra una versione e l'altra di supabase... :(
-  
+- [ ] token refresh usando le Background Api (vedi https://github.com/supabase/gotrue-js/blob/5c43ca5ffda8b9cccc493a47a4d3a6194a057ad2/src/GoTrueClient.ts#L838 - https://stackoverflow.com/questions/72610091/supabase-rest-how-to-refresh-token)
+- [ ] implementare la composizione delle query verso postgrest
+- [ ] viste di lista
+- [ ] vista di dettaglio
+- [ ] vista di modifica
+- [ ] vista di inserimento
+- [ ] 

@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Page.Home
 import Browser exposing (Document, UrlRequest)
 import Browser.Navigation as Nav
 import Url exposing (Url)
@@ -12,10 +13,14 @@ import Page.InfoSystem.List as ListInfoSys
 import Page.InfoSystem.Edit as ISEdit
 import Route exposing (Route)
 import Session.Session as Session
-import Session.Viewer as Viewer
-import Session.Cred as Cred
+
 import Api
 import Utils.Url
+import Page exposing (Page(..))
+
+---  pages
+import Page.NotFound
+import Page.Home
 
 
 {-| NAVIGATION FLOW
@@ -51,11 +56,7 @@ type alias Model =
     }
 
 
-type Page
-    = NotFoundPage
-    | HomePage
-    | ListPage ListInfoSys.Model  
-    | ISEditPage ISEdit.Model      
+  
 
 ---- INIT
 
@@ -136,6 +137,10 @@ initCurrentPage : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 initCurrentPage ( model, existingCmds ) =
     let
         ( currentPage, mappedPageCmds ) =
+          if Page.needAuth model.route && 
+              Session.viewer model.session.session == Nothing
+          then (HomePage, Api.login ())
+          else
             case model.route of
 
                 --- simple view pages --------
@@ -154,15 +159,11 @@ initCurrentPage ( model, existingCmds ) =
                     ( ListPage pageModel, Cmd.map ListPageMsg pageCmds )
 
                 Route.ISEdit sysid ->
-                  case Session.viewer model.session.session of
-                    Nothing -> 
-                      (HomePage, Api.login ())
-                    Just _ ->
-                      let
-                          ( pageModel, pageCmd ) =
-                              ISEdit.init sysid model.session
-                      in
-                      ( ISEditPage pageModel, Cmd.map ISEditPageMsg pageCmd )
+                    let
+                        ( pageModel, pageCmd ) =
+                            ISEdit.init sysid model.session
+                    in
+                    ( ISEditPage pageModel, Cmd.map ISEditPageMsg pageCmd )
                     
                 
     in
@@ -191,36 +192,38 @@ it call the view
 -}
 view : Model -> Document Msg
 view model =
-    { title = "ISI App"
-    , body = [ currentView model ]
-    }
-
-currentView : Model -> Html Msg
-currentView model =
+  let
+    viewer = Session.viewer model.session.session
+    viewPage = Page.viewPage viewer
+  in
     case model.page of
         NotFoundPage ->
-            notFoundView
-        
+          viewPage NotFoundPage
+          { title = "mmm"
+          , content = [Page.NotFound.view]
+          }
+          
         HomePage -> 
-          homePageView
+          viewPage HomePage
+          { title = "Home"
+          , content = [Page.Home.view]
+          }
 
         ListPage pageModel ->
-            ListInfoSys.view pageModel
-                |> Html.map ListPageMsg
+          viewPage (ListPage pageModel)
+          { title = "Elenco Sistemi"
+          , content =  [ ListInfoSys.view pageModel
+                      |> Html.map ListPageMsg 
+                    ]
+          }
 
         ISEditPage pageModel ->
-          ISEdit.view pageModel
-            |> Html.map ISEditPageMsg
-
-
-notFoundView : Html msg
-notFoundView =
-    h3 [] [ text "Oops! Pagina non trovata!" ]    
-
-homePageView: Html msg
-homePageView =
-    h3 [] [ text "questa e' la home" ]    
-
+          viewPage (ISEditPage pageModel)
+          { title = "Modifica Sistema"
+          , content =  [ ISEdit.view pageModel
+                      |> Html.map ISEditPageMsg
+                    ]                    
+          }
 
 ---- UPDATE the page model   
 

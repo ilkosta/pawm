@@ -3,7 +3,7 @@ module Utils.Error.LoadingProblem exposing (viewProblems,Problem(..))
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Svg exposing (svg)
-import UI 
+import Utils.UI
 
 type Problem
     = ServerError String
@@ -27,7 +27,7 @@ viewProblems problem =
             [ id "not2b-title"
             , class "h5 "
             ]
-            [ UI.getIcon "it-close-circle" []
+            [ Utils.UI.getIcon "it-close-circle" []
             , text "Errore nella comunicazione con il server" 
             ]
         , span[][ text errorMessage ]

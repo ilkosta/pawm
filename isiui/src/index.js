@@ -6,6 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 // import 'bootstrap-italia';
 
 const storageKey = "sb-localhost-auth-token";
+const api_host = "http://localhost:54321"
+const api_url = api_host + "/rest/v1/";
+//const anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+const anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
 
 const options = {
   schema: 'public',
@@ -18,11 +22,10 @@ const options = {
 };
 
 const supabase = createClient(
-  'http://localhost:54321',
+  api_host,
   // "http://localhost:3000",
   // public anonymous key of the supabase project (from dashboard)
-  // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU",
+  anon_key,
   options
 );
 
@@ -45,7 +48,7 @@ function getToken() {
 
 // laoding of the localStorage at start up
 function initElm() {
-  let flags = { viewer: getToken(), api_url: "http://localhost:54321/rest/v1/" };
+  let flags = { viewer: getToken(), api_url: api_url };
   console.log(`flags di inizializzazione: ${JSON.stringify(flags)}`);
   return Elm.Main.init({ node: document.getElementById('root'), flags: flags });
 }
@@ -55,15 +58,36 @@ const app = initElm();
 
 function renewToken() {
 
-  if (!getToken())
+  let token = getToken()
+  if (!token)
     return;
 
   // TODO : renew token
-  token = "";
-  // store in localstorage
-  localStorage.setItem(storageKey, token);
-  // load in Elm the renewd token
-  app.ports.onStoreChange.send(token);
+  let refresh_token = token.refresh_token;
+
+  fetch(api_host + "/auth/v1/token?grant_type=refresh_token",
+    {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'apikey': anon_key
+      },
+      method: "POST",
+      body: JSON.stringify({ refresh_token: refresh_token })
+    })
+    .then(function (res) {
+      console.log("nuovo token:" + res);
+      if (res.ok) {
+        // store in localstorage
+        localStorage.setItem(storageKey, token);
+        // load in Elm the renewd token
+        app.ports.onStoreChange.send(token);
+    }
+
+  })
+    .catch(function (res) {
+      console.error(res);
+    });
 }
 
 var now = new Date().getTime();
