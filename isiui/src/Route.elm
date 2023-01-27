@@ -17,6 +17,7 @@ type Route
     | ISList
     -- | ISDetails InfoSysId
     | ISEdit InfoSysId
+    | ISDetails InfoSysId
     
 
 
@@ -36,7 +37,8 @@ matchRoute =
         [ map Home top
         , map ISList (s "sistemi")
         -- , map ISDetails (s "sistemi" </> ISysSummary.idParser)
-        , map ISEdit (s "sistemi" </> ISysSummary.idParser </> s "modifica")
+        , map ISEdit    (s "sistema" </> ISysSummary.idParser </> s "modifica")
+        , map ISDetails (s "sistema" </> ISysSummary.idParser )
         ]
 
 
@@ -60,7 +62,10 @@ routeToPieces page =
           ["sistemi"]
 
         ISEdit id ->
-          ["sistemi", ISysSummary.idToString id, "modifica"  ]
+          ["sistema", ISysSummary.idToString id, "modifica"  ]
+        
+        ISDetails id -> 
+          ["sistema", ISysSummary.idToString id ]
         -- Settings ->
         --     [ "settings" ]
 
@@ -77,7 +82,7 @@ href targetRoute =
 -- INTERNAL fragment like a path
 routeToString : Route -> String
 routeToString page =
-    "#/" ++ String.join "/" (routeToPieces page)  
+    "/" ++ String.join "/" (routeToPieces page)  
 
 pushUrl : Route -> Nav.Key -> Cmd msg
 pushUrl route navKey =

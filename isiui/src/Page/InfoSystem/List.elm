@@ -3,12 +3,14 @@ module Page.InfoSystem.List exposing
   , Msg
   , init, update, view, subscriptions)
 
-import Html exposing (Html,div,h3,text,button,table,tr,td,th,a)
-import Html.Attributes exposing (href)
-
 import Html.Events exposing (onClick)
 
 import Http
+
+import Html exposing (Html, a, button, div, li, nav, p, span, text, ul,h3,hr)
+import Html.Attributes as HAttr exposing (class,  href, style, attribute)
+import Html.Events exposing (onClick)
+import Utils.UI
 
 import Json.Decode as Decode
 import Data.InfoSysSummary exposing (InfoSysId, decoder)
@@ -20,6 +22,9 @@ import Api exposing (apiConfig)
 import Session.Session as Session
 import Data.BasePageData as BasePageData
 import Url
+import Email
+import Postgrest.Queries as Q
+
 
 type alias DT = List InfoSysSummary.InfoSysSummary
 
@@ -50,7 +55,7 @@ fetchIS session =
     urlStr = Session.getApi session |> Url.toString
   in
     RemoteData.Http.getWithConfig (apiConfig session.session)
-      (urlStr ++ "info_system")
+      (urlStr ++ "info_system" ++ "?" ++ listQry)
       InfosysReceived (Data.InfoSysSummary.decoder |> Decode.list)
 
     -- Http.get
@@ -59,6 +64,20 @@ fetchIS session =
     --         postsDecoder
     --             |> Http.expectJson (RemoteData.fromResult >> PostsReceived)
     --     }
+
+listQry : String
+listQry =
+  [ Q.select 
+    [ Q.attribute "id"
+    , Q.attribute "name"
+    , Q.attribute "description"
+    , Q.attribute "finality"
+    , Q.resourceWithParams "resp:address_book!resp_email"
+      [] (Q.attributes [ "fullname", "email", "legal_structure_name"])
+    ]
+  ] 
+  |> Q.toQueryString
+  |> Debug.log "querystring: " 
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -81,90 +100,89 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ button [ onClick FetchInfosystems ]
-            [ text "Refresh posts" ]
-        , viewInfoSys model.data
+    div 
+      [class "container mb-5 mt-5 pt-5"]
+      ( -- List.append (List.map Problem.viewProblems model.problems)
+        Utils.UI.viewRemoteData (List.singleton << viewInfoSystems) model.data 
+      
+      )
+
+
+
+viewInfoSystems : DT ->  Html Msg 
+viewInfoSystems data = 
+  div [ class "row" ] (List.map (viewSingleInfoSys True) data )
+
+viewSingleInfoSys : Bool -> InfoSysSummary.InfoSysSummary ->  Html Msg 
+viewSingleInfoSys canEdit data  = 
+    div
+        [ class "col-12 col-lg-6"
         ]
-
-
-viewInfoSys : WebData DT -> Html Msg
-viewInfoSys posts =
-    case posts of
-        RemoteData.NotAsked ->
-            text ""
-
-        RemoteData.Loading ->
-            h3 [] [ text "Loading..." ]
-
-        RemoteData.Success actualPosts ->
-            div []
-                [ h3 [] [ text "Posts" ]
-                , table []
-                    (viewTableHeader :: (List.map viewIS actualPosts))
+        [             {-start card-}
+        div
+            [ class "card-wrapper card-space"
+            ]
+            [ div
+                [ class "card card-bg card-big border-bottom-card"
                 ]
-
-        RemoteData.Failure httpError ->
-            viewFetchError (buildErrorMessage httpError)
-
-
-viewTableHeader : Html Msg
-viewTableHeader =
-    tr []
-        [ th []
-            [ text "ID" ]
-        , th []
-            [ text "Title" ]
-        , th []
-            [ text "Author" ]
+                [ if canEdit then
+                    div
+                      [ class "etichetta"
+                      ]
+                      [ Utils.UI.getIcon "it-pencil" []                    
+                      , a [ Route.href (Route.ISEdit data.id)]
+                          [ text "Modifica" ]
+                      , span -- per l'accessibilita' tramite screen reader
+                        [ class "visually-hidden" ]
+                        [ text ("modifica il sistema informativo " ++ data.name) ]
+                      ]
+                  else
+                    div [ class "etichetta"] []
+                ------- 
+                , div
+                    [ class "card-body"
+                    ]
+                    [ h3
+                          [ class "card-title h5 no_toc" ]
+                          [ (InfoSysSummary.idToString data.id)
+                              ++ "  -  " ++ data.name 
+                            |> text
+                          ]
+                      , p
+                          [ class "card-text" ]
+                          [ text data.description ]
+                          
+                      
+                    ]
+                ------
+                , div [ class "id-card-footer"]
+                  [ span
+                      [ class "card-signature" ]
+                      [ text  data.respName ]
+                  , p [ class "card-signature"]
+                      [ text data.respStructure]
+                    
+                  , a
+                      [ Route.href (Route.ISDetails data.id)
+                      , class "read-more"
+                      ]
+                      [ span 
+                          [ class "text"] 
+                          [ text "Leggi di più" ]
+                      , span -- per l'accessibilita' tramite screen reader
+                          [ class "visually-hidden" ]
+                          [ text ("vai al dettaglio del sistema informativo " ++ data.name) ]
+                      , Utils.UI.getIcon "it-arrow-right" []                            
+                      ]
+                  ]
+                ]
+            ]
+        {-end card-}
         ]
 
 
-viewIS : InfoSysSummary -> Html Msg
-viewIS sys =
-    let
-        isPath =
-            "/sistema/" ++ Data.InfoSysSummary.idToString sys.id
-    in
-    tr []
-        [ td []
-            [ text (Data.InfoSysSummary.idToString sys.id) ]
-        , td []
-            [ text sys.name ]
-        , td []
-            [ a [ href isPath ] [ text "Modifica" ] ]
-        ]
 
 
-viewFetchError : String -> Html Msg
-viewFetchError errorMessage =
-    let
-        errorHeading =
-            "Couldn't fetch posts at this time."
-    in
-    div []
-        [ h3 [] [ text errorHeading ]
-        , text ("Error: " ++ errorMessage)
-        ]
-
-
-buildErrorMessage : Http.Error -> String
-buildErrorMessage httpError =
-    case httpError of
-        Http.BadUrl message ->
-            message
-
-        Http.Timeout ->
-            "Server is taking too long to respond. Please try again later."
-
-        Http.NetworkError ->
-            "Unable to reach server."
-
-        Http.BadStatus statusCode ->
-            "Request failed with status code: " ++ String.fromInt statusCode
-
-        Http.BadBody message ->
-            message
 
 {-| 
 Subscriptions scope:

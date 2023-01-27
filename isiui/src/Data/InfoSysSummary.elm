@@ -12,6 +12,8 @@ module Data.InfoSysSummary exposing
 import Json.Decode as Decode exposing (int,string,Decoder)
 import Json.Decode.Pipeline as JsonPL
 import Url.Parser exposing (Parser,custom)
+import Email 
+import Utils.Email exposing (emailDecoder)
 
 -- opaque type (https://elmprogramming.com/commands.html#opaque-type) 
 -- to hide the implementation details
@@ -41,7 +43,10 @@ type alias InfoSysSummary =
   { id : InfoSysId
   , name : String
   , description : String
-  , finality : String
+  , respEmail : Email.Email
+  , respName : String
+  , respStructure : String
+  , finality : String  
   }
 
 decoder = 
@@ -49,5 +54,8 @@ decoder =
     |> JsonPL.required "id" idDecoder
     |> JsonPL.required "name" string
     |> JsonPL.required "description" string
+    |> JsonPL.requiredAt ["resp", "email"] emailDecoder
+    |> JsonPL.requiredAt ["resp", "fullname"] string
+    |> JsonPL.requiredAt ["resp", "legal_structure_name"] string
     |> JsonPL.optional "finality" string "---"
 

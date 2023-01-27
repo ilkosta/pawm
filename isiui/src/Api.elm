@@ -20,8 +20,10 @@ apiConfig : Session -> RemoteData.Http.Config
 apiConfig _ =
     { defaultConfig
         | headers =
-            [ header "apikey" "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24ifQ.625_WdcF3KHqz5amU0x2X5WWHP-OEs_4qj0ssLNHzTs"
-            , header "Authorization" "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNjYzMDAyNDAwLCJzdWIiOiI3ZWYxODgyNS0xOGYwLTQ4NGYtOTJlMi03NTFiYWNhZjQ2MGQiLCJlbWFpbCI6ImNvc3RhbnRpbi5naXVsaW9kb3JpQHN0dWRlbnRpLnVuaWNhbS5pdCIsInBob25lIjoiIiwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiZ29vZ2xlIiwicHJvdmlkZXJzIjpbImdvb2dsZSJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUl0YnZtbDE1V25CS013LWlzN1EyTFVoZV9MMTJwSTZBRzZhVi00NkRnNDc9czk2LWMiLCJlbWFpbCI6ImNvc3RhbnRpbi5naXVsaW9kb3JpQHN0dWRlbnRpLnVuaWNhbS5pdCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmdWxsX25hbWUiOiJDT1NUQU5USU5PIEdJVUxJT0RPUkkiLCJpc3MiOiJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS91c2VyaW5mby92Mi9tZSIsIm5hbWUiOiJDT1NUQU5USU5PIEdJVUxJT0RPUkkiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUl0YnZtbDE1V25CS013LWlzN1EyTFVoZV9MMTJwSTZBRzZhVi00NkRnNDc9czk2LWMiLCJwcm92aWRlcl9pZCI6IjExNzkyODM4NDA5OTIwNjE4NTUyMCIsInN1YiI6IjExNzkyODM4NDA5OTIwNjE4NTUyMCJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsInNlc3Npb25faWQiOiIxMTM4YTEwMC0zMDU2LTQ2M2MtOTMyMS1kNTdlOWRiNWZhZDQifQ.AkSdJdUuLgJ_le9a_svb2OJZOkIk5HN08FVRnmX3brY"
+            [ header "apikey" "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+            , header "Authorization" "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+            , header "Prefer" "count=estimated" -- https://postgrest.org/en/stable/api.html#estimated-count
+            , header "Accept" "application/json"
             ]
     }
 

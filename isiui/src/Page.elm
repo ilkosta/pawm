@@ -32,6 +32,7 @@ needAuth route =
       Route.NotFound -> False
       Route.ISList -> False
       Route.ISEdit _ -> True
+      Route.ISDetails _ -> False
 
 
 

@@ -164,6 +164,8 @@ initCurrentPage ( model, existingCmds ) =
                             ISEdit.init sysid model.session
                     in
                     ( ISEditPage pageModel, Cmd.map ISEditPageMsg pageCmd )
+
+                _ -> ( NotFoundPage, Cmd.none )
                     
                 
     in
