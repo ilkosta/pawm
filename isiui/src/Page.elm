@@ -148,20 +148,36 @@ navPages : Page -> Maybe Viewer -> List (Html msg)
 navPages currPage maybeViewer =
   let
     linkTo = navbarLink currPage
+    pubLinks = 
+      [ linkTo Route.Home "Home"
+      , linkTo Route.ISList "Elenco"
+      ]
     privateLinks = 
-      [ linkTo Route.ISList "Elenco"
+      [ 
       ]
     links = 
-      if maybeViewer == Nothing then 
-          [ linkTo Route.Home "Home"]
-        else
-          (List.append [ linkTo Route.Home "Home"] privateLinks)
+      if maybeViewer == Nothing 
+      then pubLinks
+      else (pubLinks ++ privateLinks)
 
   in
     [ ul
         [ class "link-list" ] 
         links
     ]
+
+
+isActivePage : Page -> Route -> Bool
+isActivePage page route = 
+  case ( page, route ) of
+    ( HomePage, Route.Home ) ->
+        True
+
+    ( ListPage _, Route.ISList ) -> True
+
+    _ -> 
+        False 
+
 
 navbarLink : Page -> Route -> String -> Html msg
 navbarLink page route lnkText =
@@ -171,29 +187,9 @@ navbarLink page route lnkText =
             , Route.href route
             ]
 
-    isActive : Bool
-    isActive =
-        case ( page, route ) of
-            ( HomePage, Route.Home ) ->
-                True
-
-            -- ( Login, Route.Login ) ->
-            --     True
-
-            -- ( Register, Route.Register ) ->
-            --     True
-
-            -- ( Settings, Route.Settings ) ->
-            --     True
-
-            -- ( Profile pageUsername, Route.Profile routeUsername ) ->
-            --     pageUsername == routeUsername
-
-            _ ->  -- FIXME: antipattern
-                False 
           
   in
-    if isActive then
+    if isActivePage page route then
       li  []
           [ a
               (
