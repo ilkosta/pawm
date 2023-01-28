@@ -145,14 +145,20 @@ view model =
     div 
       [class "container mb-5 mt-5 pt-5"]
       ( -- List.append (List.map Problem.viewProblems model.problems)
-        Utils.UI.viewRemoteData (List.singleton << (viewInfoSystems model.filters)) model.data 
+        Utils.UI.viewRemoteData (List.singleton << (viewInfoSystems model)) model.data 
       
       )
 
 
 
-viewInfoSystems : Filters -> DT ->  Html Msg 
-viewInfoSystems filters data = 
+viewInfoSystems : {a| filters: Filters, session: Session.Model} -> DT ->  Html Msg 
+viewInfoSystems {filters,session} data = 
+  let 
+    canEdit = 
+      case Session.viewer session.session of
+        Just _ -> True
+        Nothing -> False
+  in
   div [] 
   [ if Dict.isEmpty filters 
     then div[][]
@@ -168,7 +174,7 @@ viewInfoSystems filters data =
         ]
       ]
   , div [ class "row" ] 
-    (List.map (viewSingleInfoSys True) data )
+    (List.map (viewSingleInfoSys canEdit) data )
   ]
 
 viewFilter : FilterName -> FilterValue -> Html Msg
@@ -199,7 +205,25 @@ viewFilter k v =
 
 
 viewSingleInfoSys : Bool -> InfoSysSummary.InfoSysSummary ->  Html Msg 
-viewSingleInfoSys canEdit data  = 
+viewSingleInfoSys canEdit data  =
+  let
+    editHeader = 
+      if canEdit then
+        [ div
+          [ class "etichetta"
+          ]
+          [ Utils.UI.getIcon "it-pencil" []                    
+          , a [ Route.href (Route.ISEdit data.id)]
+              [ text "Modifica" ]
+          , span -- per l'accessibilita' tramite screen reader
+            [ class "visually-hidden" ]
+            [ text ("modifica il sistema informativo " ++ data.name) ]
+          ]
+        ]
+      else
+        []
+  in
+
     div
         [ class "col-12 col-lg-6"
         ]
@@ -210,21 +234,8 @@ viewSingleInfoSys canEdit data  =
             [ div
                 [ class "card card-bg card-big border-bottom-card"
                 ]
-                [ if canEdit then
-                    div
-                      [ class "etichetta"
-                      ]
-                      [ Utils.UI.getIcon "it-pencil" []                    
-                      , a [ Route.href (Route.ISEdit data.id)]
-                          [ text "Modifica" ]
-                      , span -- per l'accessibilita' tramite screen reader
-                        [ class "visually-hidden" ]
-                        [ text ("modifica il sistema informativo " ++ data.name) ]
-                      ]
-                  else
-                    div [ class "etichetta"] []
-                ------- 
-                , div
+                (editHeader ++ 
+                [ div
                     [ class "card-body"
                     ]
                     [ h3
@@ -236,13 +247,11 @@ viewSingleInfoSys canEdit data  =
                       , p
                           [ class "card-text" ]
                           [ text data.description ]
-                          
-                      
                     ]
                 ------
                 , div [ class "id-card-footer"]
                   [ span
-                      [ class "card-signature text-decoration-underline "
+                      [ class "card-signature text-decoration-underline"
                       , onClick <| 
                         AddFilter "responsabile" 
                         { field = "resp_email"
@@ -267,7 +276,7 @@ viewSingleInfoSys canEdit data  =
                       , Utils.UI.getIcon "it-arrow-right" []                            
                       ]
                   ]
-                ]
+                ])
             ]
         {-end card-}
         ]

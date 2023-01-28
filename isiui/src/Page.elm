@@ -153,7 +153,7 @@ navPages currPage maybeViewer =
       , linkTo Route.ISList "Elenco"
       ]
     privateLinks = 
-      [ 
+      [ -- TODO: aggiungere il menu per la pagina di nuovo
       ]
     links = 
       if maybeViewer == Nothing 
