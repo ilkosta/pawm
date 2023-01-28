@@ -5,7 +5,7 @@ module Page.InfoSystem.List exposing
 
 import Html.Events exposing (onClick)
 
-import Http
+import Dict
 
 import Html exposing (Html, a, button, div, li, nav, p, span, text, ul,h3,hr)
 import Html.Attributes as HAttr exposing (class,  href, style, attribute)
@@ -20,53 +20,74 @@ import Route exposing (Route)
 import Data.InfoSysSummary as InfoSysSummary exposing (InfoSysSummary)
 import Api exposing (apiConfig)
 import Session.Session as Session
-import Data.BasePageData as BasePageData
+-- import Data.BasePageData as BasePageData
 import Url
-import Email
+-- import Utils.Error.LoadingProblem  as Problem
 import Postgrest.Queries as Q
+import Email
+import Svg.Attributes exposing (in_)
 
 
 type alias DT = List InfoSysSummary.InfoSysSummary
 
+type alias FilterValue = 
+  { field : String
+  , value : String
+  , readable : String
+  }
+
+type alias FilterName = String
+type alias Filters = Dict.Dict FilterName FilterValue
+
 type alias Model =
-    BasePageData.BaseDataModel DT
+  { data : WebData DT
+  , session : Session.Model
+  -- , problems : List Problem.Problem
+  , filters : Filters
+  }
+
 
 
 type Msg
     = FetchInfosystems
     | InfosysReceived (WebData DT)
+    | AddFilter FilterName FilterValue
+    | RemoveFilter FilterName
     
+
 
 
 init : Session.Model -> ( Model, Cmd Msg )
 init session =
   let 
-    (model, _ ) = BasePageData.init session
+    model = 
+      { data = RemoteData.Loading
+      , session = session
+      , filters = Dict.empty
+      }
   in
-    ( {model | data = RemoteData.Loading}, fetchIS session )
+  ( model , fetchIS model)
 
 
 
 
 
-fetchIS : Session.Model -> Cmd Msg
-fetchIS session =
+fetchIS : {a | session : Session.Model, filters : Filters } -> Cmd Msg
+fetchIS {session, filters} =
   let
-    urlStr = Session.getApi session |> Url.toString
+    baseUrl = Session.getApi session |> Url.toString
+    qry = 
+      filteredList filters 
+      |> Q.toQueryString 
+    url = baseUrl ++ "info_system" ++ "?" ++ qry |> Debug.log "qry:"
   in
     RemoteData.Http.getWithConfig (apiConfig session.session)
-      (urlStr ++ "info_system" ++ "?" ++ listQry)
+      url
       InfosysReceived (Data.InfoSysSummary.decoder |> Decode.list)
 
-    -- Http.get
-    --     { url = "http://localhost:5019/posts/"
-    --     , expect =
-    --         postsDecoder
-    --             |> Http.expectJson (RemoteData.fromResult >> PostsReceived)
-    --     }
 
-listQry : String
-listQry =
+defaultListQry : Q.Params
+defaultListQry =
   [ Q.select 
     [ Q.attribute "id"
     , Q.attribute "name"
@@ -75,21 +96,42 @@ listQry =
     , Q.resourceWithParams "resp:address_book!resp_email"
       [] (Q.attributes [ "fullname", "email", "legal_structure_name"])
     ]
-  ] 
-  |> Q.toQueryString
-  |> Debug.log "querystring: " 
+  ]
 
+filteredList : Filters -> Q.Params
+filteredList filters =
+  let
+    filter2param _ v = Q.param v.field (Q.eq (Q.string v.value))
+  in
+  Dict.map filter2param filters
+  |> Dict.toList
+  |> List.map Tuple.second
+  |> List.singleton 
+  |> List.append [defaultListQry]
+  |> Q.concatParams 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FetchInfosystems ->
             ( { model | data = RemoteData.Loading }
-            , fetchIS model.session
+            , fetchIS model
             )
 
         InfosysReceived data ->
             ( { model | data = data }, Cmd.none )
+
+        AddFilter name value ->
+          let
+              nM = { model | filters = Dict.insert name value model.filters }
+          in          
+          ( nM , fetchIS nM)
+
+        RemoveFilter name -> 
+          let
+            nM = { model | filters = Dict.remove name model.filters }
+          in
+          ( nM , fetchIS nM)
         
 
 
@@ -103,15 +145,58 @@ view model =
     div 
       [class "container mb-5 mt-5 pt-5"]
       ( -- List.append (List.map Problem.viewProblems model.problems)
-        Utils.UI.viewRemoteData (List.singleton << viewInfoSystems) model.data 
+        Utils.UI.viewRemoteData (List.singleton << (viewInfoSystems model.filters)) model.data 
       
       )
 
 
 
-viewInfoSystems : DT ->  Html Msg 
-viewInfoSystems data = 
-  div [ class "row" ] (List.map (viewSingleInfoSys True) data )
+viewInfoSystems : Filters -> DT ->  Html Msg 
+viewInfoSystems filters data = 
+  div [] 
+  [ if Dict.isEmpty filters 
+    then div[][]
+    else 
+      div [class "row"]
+      [ div [ class "callout note"] 
+        [ div [ class "callout-title"]
+          [ Utils.UI.getIcon "it-info-circle" []
+          , text "Filtri attivi:" 
+          ]
+        , div [ class "row"] 
+          (Dict.map viewFilter filters |> Dict.toList |> List.map Tuple.second)        
+        ]
+      ]
+  , div [ class "row" ] 
+    (List.map (viewSingleInfoSys True) data )
+  ]
+
+viewFilter : FilterName -> FilterValue -> Html Msg
+viewFilter k v =
+  let
+    lbl = k ++ ": " ++ v.readable
+  in
+    div [ class "col-12 col-md-8"]
+    [ div
+      [ class "chip chip-primary chip-lg chip-simple"
+      ]
+      [ span
+          [ class "chip-label"
+          ]
+          [ text lbl ]
+      , button
+          [ onClick <| RemoveFilter k
+          ]
+          [ Utils.UI.getIcon "it-close" [] 
+          , span
+              [ class "visually-hidden"
+              ]
+              [ text "Elimina label" ]
+          ]
+      ]
+    ]
+    
+
 
 viewSingleInfoSys : Bool -> InfoSysSummary.InfoSysSummary ->  Html Msg 
 viewSingleInfoSys canEdit data  = 
@@ -157,7 +242,14 @@ viewSingleInfoSys canEdit data  =
                 ------
                 , div [ class "id-card-footer"]
                   [ span
-                      [ class "card-signature" ]
+                      [ class "card-signature text-decoration-underline "
+                      , onClick <| 
+                        AddFilter "responsabile" 
+                        { field = "resp_email"
+                        , value = Email.toString data.respEmail
+                        , readable = data.respName
+                        }
+                      ]
                       [ text  data.respName ]
                   , p [ class "card-signature"]
                       [ text data.respStructure]
