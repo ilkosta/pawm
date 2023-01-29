@@ -5,6 +5,8 @@ port module Api exposing
     , qryWithRepresentationConfig
     , sessionChanges
     , viewerDecoder
+    , apiConfigToRequestConfig
+    , apiSingleResult
     )
 
 import Browser.Navigation as Nav
@@ -14,25 +16,48 @@ import RemoteData.Http exposing (defaultConfig)
 import Session.Cred as Cred exposing (Cred)
 import Session.Session as Session exposing (Session)
 import Session.Viewer as Viewer exposing (Viewer)
+import Dict
 
 
-apiConfig : Session -> RemoteData.Http.Config
-apiConfig _ =
-    { defaultConfig
-        | headers =
-            [ header "apikey" "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
-            , header "Authorization" "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
-            , header "Prefer" "count=estimated" -- https://postgrest.org/en/stable/api.html#estimated-count
-            , header "Accept" "application/json"
-            ]
-    }
+apiConfigToRequestConfig : Dict.Dict String String -> RemoteData.Http.Config
+apiConfigToRequestConfig conf =
+  let
+    headers = Dict.toList conf |> List.map (\(k,v) -> header k v)
+  in
+    { defaultConfig | headers = headers }
 
+apiConfig : Session -> Dict.Dict String String
+apiConfig session =
+  let
+    anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+    authKey =
+      case Session.viewer session of
+        Nothing -> anonKey
+        Just viewer -> Viewer.token viewer
+    
+  in
+    Dict.fromList 
+      [ ("apikey", anonKey)
+      , ("Authorization", "Bearer " ++ authKey)
+      , ("Prefer", "count=estimated" ) -- https://postgrest.org/en/stable/api.html#estimated-count
+      , ("Accept", "application/json")
+      ]
+
+
+apiSingleResult : Dict.Dict String String -> Dict.Dict String String
+apiSingleResult conf =
+  let 
+    -- https://postgrest.org/en/stable/api.html#singular-or-plural
+    f = Maybe.andThen (\_ -> Just "application/vnd.pgrst.object+json") 
+  in
+  Dict.update "Accept" f conf 
+  
 
 qryWithRepresentationConfig : Session -> RemoteData.Http.Config
 qryWithRepresentationConfig session =
     let
         config =
-            apiConfig session
+            apiConfig session |> apiConfigToRequestConfig
     in
     { config
         | headers =

@@ -2,6 +2,7 @@ module Session.Cred exposing
   ( Cred
   , getUserId, getEmail, getFullName
   , decoder
+  , getToken -- UNSAFE
   )
 
 
@@ -46,6 +47,10 @@ getEmail (Cred {email}) = email
 
 getFullName : Cred -> String
 getFullName (Cred {fullName}) = fullName
+
+
+getToken : Cred -> String
+getToken (Cred {token}) = token
 
 {-| It's important that this is never exposed!
 

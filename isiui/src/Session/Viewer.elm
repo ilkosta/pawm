@@ -1,5 +1,7 @@
 module Session.Viewer exposing 
-  (Viewer, cred, decoder, userId, email, fullName )
+  (Viewer, cred, decoder, userId, email, fullName
+  , token  -- UNSAFE
+  )
 
 {-| The logged-in user currently viewing this page. It stores enough data to
 be able to render the menu bar (username etc.), along with Cred so it's
@@ -41,6 +43,11 @@ email (Viewer val) = Cred.getEmail val
 
 fullName  : Viewer -> String
 fullName (Viewer val) = Cred.getFullName val
+
+
+-- unsafe to export
+token : Viewer -> String
+token (Viewer val) = Cred.getToken val
 
 
 -- SERIALIZATION

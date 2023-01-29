@@ -19,6 +19,10 @@ import Utils.Error.EditProblem as Problem
 
 import Session.Session as Session
 import Page.InfoSystem.Form exposing (infoSys2Form)
+import Data.InfoSysSummary as InfoSysSummary 
+import InfoSysSummary
+
+import Postgrest.Queries as Q
 
 
 
@@ -67,12 +71,28 @@ fetchData session isID =
   let
     url = 
       (Session.getApi session |> Url.toString) 
-      ++ "info_system/" 
-      ++ Data.InfoSysSummary.idToString isID
+      ++ "info_system?" 
+      ++ (Q.toQueryString <| qry isID) |> Debug.log "url api modifica: "
+
+    reqConfig = 
+      Api.apiConfig session.session
+      |> Api.apiSingleResult  
+      |> Api.apiConfigToRequestConfig
+
   in
-  RemoteData.Http.getWithConfig (apiConfig session.session)
-    url
-    ISReceived InfoSys.decoder
+  RemoteData.Http.getWithConfig reqConfig
+    url ISReceived InfoSys.decoder
+
+
+qry : InfoSysId -> Q.Params
+qry isID = 
+  let
+    id = InfoSysSummary.idToInt isID |> Q.int
+  in
+  Q.attributes ["id","description","finality","uo_id","pass_url","name","resp_email","resp_inf_email"]
+  |> Q.select |> List.singleton
+  |> List.append [ Q.param "id" (Q.eq id) ]
+  
 
 
 type Msg

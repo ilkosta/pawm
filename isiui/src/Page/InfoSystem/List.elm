@@ -80,8 +80,12 @@ fetchIS {session, filters} =
       filteredList filters 
       |> Q.toQueryString 
     url = baseUrl ++ "info_system" ++ "?" ++ qry |> Debug.log "qry:"
+
+    reqConfig = 
+      apiConfig session.session
+      |> Api.apiConfigToRequestConfig
   in
-    RemoteData.Http.getWithConfig (apiConfig session.session)
+    RemoteData.Http.getWithConfig reqConfig
       url
       InfosysReceived (Data.InfoSysSummary.decoder |> Decode.list)
 

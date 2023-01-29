@@ -50,16 +50,17 @@ buildErrorMessage : Http.Error -> String
 buildErrorMessage httpError =
     case httpError of
         Http.BadUrl message ->
-            message
+            "Ops! Ho scritto all'indirizzo sbagliato: " ++ message
 
         Http.Timeout ->
-            "Server is taking too long to respond. Please try again later."
+            "Il server sta impiegando troppo tempo a rispondere. Controlla la connessione o riprova piu' tardi."
 
         Http.NetworkError ->
-            "Unable to reach server."
+            "Il server non e' raggiungibile. Controlla la connessione"
 
         Http.BadStatus statusCode ->
-            "Request failed with status code: " ++ String.fromInt statusCode
+            "Mi spiace, la richiesta e' fallita con lo stato: " ++ String.fromInt statusCode
 
         Http.BadBody message ->
+          "Ops! ho ricevuto una risposta che non mi aspettavo: " ++ 
             message
