@@ -301,6 +301,15 @@ update msg model =
             ( { model | page = ListPage updatedPageModel }
             , Cmd.map ListPageMsg updatedCmd
             )
+
+        ( ISEditPageMsg subMsg, ISEditPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    ISEdit.update subMsg pageModel
+            in
+            ( { model | page = ISEditPage updatedPageModel }
+            , Cmd.map ISEditPageMsg updatedCmd
+            )
         -----------------------------
 
 

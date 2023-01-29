@@ -106,7 +106,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   let
-
     -- Helper function for `update`. Updates the form and returns Cmd.none.
     -- Useful for recording form fields!
     updateForm : (Form.Form -> Form.Form) -> ( Model, Cmd Msg )
@@ -115,18 +114,18 @@ update msg model =
   in
     case msg of
 
-        ISReceived infosys ->
-          case infosys of
+        ISReceived data ->          
+          case data of
               RemoteData.Success is ->                 
                 ( { model 
-                  | infosys = infosys 
+                  | infosys = data 
                   , form = Form.infoSys2Form is
                   }
                 , Cmd.none 
                 )
               _ ->
                 ( { model 
-                  | infosys = infosys 
+                  | infosys = data 
                   }
                 , Cmd.none 
                 )

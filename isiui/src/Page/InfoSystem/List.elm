@@ -7,17 +7,17 @@ import Html.Events exposing (onClick)
 
 import Dict
 
-import Html exposing (Html, a, button, div, li, nav, p, span, text, ul,h3,hr)
-import Html.Attributes as HAttr exposing (class,  href, style, attribute)
+import Html exposing (Html, a, button, div, p, span, text,h3)
+import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Utils.UI
 
 import Json.Decode as Decode
-import Data.InfoSysSummary exposing (InfoSysId, decoder)
+import Data.InfoSysSummary
 import RemoteData exposing (WebData)
-import RemoteData.Http exposing (defaultConfig)
-import Route exposing (Route)
-import Data.InfoSysSummary as InfoSysSummary exposing (InfoSysSummary)
+import RemoteData.Http
+import Route 
+import Data.InfoSysSummary as InfoSysSummary
 import Api exposing (apiConfig)
 import Session.Session as Session
 -- import Data.BasePageData as BasePageData
@@ -25,7 +25,6 @@ import Url
 -- import Utils.Error.LoadingProblem  as Problem
 import Postgrest.Queries as Q
 import Email
-import Svg.Attributes exposing (in_)
 
 
 type alias DT = List InfoSysSummary.InfoSysSummary
