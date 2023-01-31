@@ -45,27 +45,29 @@ isLoading is for determining whether we should show a loading spinner
 in the header. (This comes up during slow page transitions.)
 
 -}
-viewPage : Maybe Viewer 
+viewPage : (msg,msg)
+            -> Maybe Viewer 
             -> Page 
+            
             -> { title : String, content : List (Html msg) } 
             -> Document msg
-viewPage maybeViewer page { title, content } =
+viewPage accessMsg maybeViewer page  { title, content } =
     { title = "ISI - " ++ title
     , body = 
         List.append 
-          (viewHeader page maybeViewer)
+          (viewHeader page maybeViewer accessMsg)
           content
     }
 
-viewHeader : Page -> Maybe Viewer -> List (Html msg)
-viewHeader page maybeViewer =
-    [ slimHeader    page maybeViewer
+viewHeader : Page -> Maybe Viewer -> (msg,msg) -> List (Html msg)
+viewHeader page maybeViewer accessMsg =
+    [ slimHeader    page maybeViewer accessMsg
     , centralHeader page maybeViewer
     ]    
 
 
-slimHeader : Page -> Maybe Viewer ->  Html msg
-slimHeader page maybeViewer =
+slimHeader : Page -> Maybe Viewer -> (msg,msg) -> Html msg
+slimHeader page maybeViewer accessMsg =
     div
         [ class "it-header-slim-wrapper"
         , class "it-header-sticky"      -- visibile in formato ridotto anche allo scorrere della pagina
@@ -113,7 +115,7 @@ slimHeader page maybeViewer =
                                     (navPages page maybeViewer)
                                 ]
                             ]
-                        , loginBtn maybeViewer
+                        , loginBtn maybeViewer accessMsg
                         ] 
                     ]
                 ]
@@ -121,26 +123,17 @@ slimHeader page maybeViewer =
         ]
 
 
-loginBtn : Maybe Viewer -> Html msg
-loginBtn maybeViewer =
-  -- let
-  --     _ = Debug.log "userid" <| Maybe.map Viewer.userId maybeViewer
-  --     _ = Debug.log "email" <| Maybe.map Viewer.email maybeViewer
-  --     _ = Debug.log "name" <| Maybe.map Viewer.fullName maybeViewer
-  -- in
+loginBtn : Maybe Viewer -> (msg,msg) -> Html msg
+loginBtn maybeViewer (loginMsg,logoutMsg) =
   div
     [ class "it-header-slim-right-zone" ]
-    [ 
-    --   a [class "nav-item",href "#/"] [text <|Maybe.withDefault "" <| Maybe.map Viewer.fullName maybeViewer]
-    -- , 
-      div
-        [ class "it-access-top-wrapper" ]
-        [ a
-            [ class "btn btn-primary btn-sm"
-            -- TODO: , Route.href <| if maybeViewer == Nothing then Route.Login  else Route.Logout               
-            ]
-            [ text <| if maybeViewer == Nothing then "Accedi" else "Esci" ]
-        ]
+    [ div [ class "it-access-top-wrapper"]
+      [ case maybeViewer of
+          Nothing -> 
+            button [ class "btn btn-primary btn-sm", onClick loginMsg ] [ text "Accedi" ]
+          _ -> 
+            button [ class "btn btn-primary btn-sm", onClick logoutMsg ] [ text "Esci" ]
+      ]
     ]
   
 

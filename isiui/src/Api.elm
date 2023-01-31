@@ -2,7 +2,7 @@ port module Api exposing
     ( apiConfig
     , login
     , logout
-    , qryWithRepresentationConfig
+    , configWithRepresentation
     , sessionChanges
     , viewerDecoder
     , apiConfigToRequestConfig
@@ -137,17 +137,10 @@ apiSingleResult conf =
   Dict.update "Accept" f conf 
   
 
-qryWithRepresentationConfig : Session -> RemoteData.Http.Config
-qryWithRepresentationConfig session =
-    let
-        config =
-            apiConfig session |> apiConfigToRequestConfig
-    in
-    { config
-        | headers =
-            header "Prefer" "return=representation" :: config.headers
-    }
 
+configWithRepresentation : Dict.Dict String String -> Dict.Dict String String
+configWithRepresentation conf = 
+  Dict.insert "Prefer" "return=representation" conf
 
 
 ----- LocalStorage
@@ -191,6 +184,7 @@ sending data to JS from Elm
 -}
 port storeCache : Maybe Decode.Value -> Cmd msg
 
+port logout : () -> Cmd msg
 
 port login : () -> Cmd msg
 
@@ -218,8 +212,8 @@ viewerDecoder =
               Decode.map2 (\a b -> a b) 
                 Viewer.decoder Cred.decoder
 
-logout : Cmd msg
-logout =
-    storeCache Nothing
+-- logout : Cmd msg
+-- logout =
+--     storeCache Nothing
 
 

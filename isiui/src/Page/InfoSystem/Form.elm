@@ -6,8 +6,9 @@ module Page.InfoSystem.Form exposing
     , infoSys2Form
     , form2infoSys
     , fetchPeople
+    , fetchUO
 
-    , viewForm
+    , view
     , validate
     , ValidatedField
     )
@@ -18,7 +19,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Url
-import Utils.Email as EmailUtils
+import Utils.Email
 import Utils.Error.EditProblem as Prob exposing (Problem, viewProblem)
 import Email
 import Route
@@ -32,6 +33,8 @@ import Json.Decode as Decode
 import Session.Session as Session
 import Postgrest.Queries as Q
 import Utils.UI
+import Data.UO exposing (UO)
+
 
 {-| Recording validation problems on a per-field basis facilitates displaying
 them inline next to the field where the error occurred.
@@ -74,8 +77,11 @@ type alias Form =
     , respSelect : SingleSelect.SmartSelect Msg Person
     , respSelected : Maybe Person
     , people : WebData Data.Person.People
-    -- , respInfSelect : SingleSelect.SmartSelect Msg Data.People.People
-    -- , respInfSelected : Maybe Data.People.People
+    , respInfSelect : SingleSelect.SmartSelect Msg Person
+    , respInfSelected : Maybe Person
+    , uoSelected : Maybe UO
+    , uoSelect : SingleSelect.SmartSelect Msg UO
+    , uoList : WebData (List UO)
     }
 
 initPersonSelect : 
@@ -108,6 +114,19 @@ emptyForm =
     , respSelected = Nothing
     , people = RemoteData.NotAsked
 
+    , respInfSelect = 
+        initPersonSelect 
+          HandleRespInfSelection
+          HandleRespInfSelectUpdate        
+    , respInfSelected = Nothing
+
+    , uoSelect = 
+        SingleSelect.init 
+        { selectionMsg = HandleUOSelection 
+        , internalMsg = HandleUOSelectUpdate
+        }   
+    , uoSelected = Nothing
+    , uoList = RemoteData.NotAsked
     }
 
 
@@ -130,8 +149,20 @@ infoSys2Form is =
         initPersonSelect 
           HandleRespSelection
           HandleRespSelectUpdate
+    , respInfSelected = Nothing
+    , respInfSelect = 
+        initPersonSelect 
+          HandleRespInfSelection
+          HandleRespInfSelectUpdate
     , people = RemoteData.NotAsked
 
+    , uoSelect = 
+        SingleSelect.init 
+        { selectionMsg = HandleUOSelection 
+        , internalMsg = HandleUOSelectUpdate
+        }   
+    , uoSelected = Nothing
+    , uoList = RemoteData.NotAsked
     }
 
 
@@ -148,28 +179,50 @@ fetchPeople {session} =
     url = 
       baseUrl ++ "address_book?" ++
       ( [ Q.select <| Q.attributes ["fullname","pa_role","legal_structure_name","email"]
-        , Q.order [Q.asc "id" ]
+        , Q.order [Q.asc "fullname" ]
         ] |> Q.toQueryString
       )
   in
     RemoteData.Http.getWithConfig reqConfig url
       HandlePeopleResponse (Decode.list Data.Person.decoder)
+
+
+fetchUO: {a | session : Session.Model} -> Cmd Msg
+fetchUO {session} = 
+  let
+    reqConfig = 
+      Api.apiConfig session.session
+      |> Api.apiConfigToRequestConfig
+    
+    baseUrl = Session.getApi session |> Url.toString
+    url = 
+      baseUrl ++ "uo?" ++
+      ( [ Q.select <| Q.attributes ["id","coddesc","description"]
+        , Q.order [Q.asc "description" ]
+        ] |> Q.toQueryString
+      )
+  in
+    RemoteData.Http.getWithConfig reqConfig url
+      HandleUOResponse (Decode.list Data.UO.decoder)      
 ------
 
 form2infoSys : TrimmedForm -> InfoSystem
 form2infoSys (Trimmed f)  =
+  let
+    email maybePerson = 
+      Maybe.map (\p -> p.email) maybePerson
+  in
   { id = Maybe.map ISS.idFromInt f.id
   , name = f.name
   , description = f.description
   , finality = f.finality
-  , uo = 0
+  , uo = Maybe.map (.id) f.uoSelected
+          |> Maybe.withDefault 0 
   , passPrj = 
       Url.fromString f.passUrl
       |> Maybe.withDefault emptyUrl
-  , resp = 
-      Email.fromString f.respEmail
-      |> Maybe.withDefault EmailUtils.emptyEmail
-  , respInf = Email.fromString f.respInfEmail
+  , resp = email f.respSelected |> Maybe.withDefault Utils.Email.emptyEmail  
+  , respInf = email f.respInfSelected
   }
 
 {-| Marks that we've trimmed the form's fields, so we don't accidentally send
@@ -186,8 +239,8 @@ type ValidatedField
     | Description
     -- | Finality
     | PassUrl
-    | RespEmail
-    | RespInfEmail
+    | Resp
+    | RespInf
 
 
 fieldsToValidate : List ValidatedField
@@ -196,8 +249,8 @@ fieldsToValidate =
     , Description
     -- , Finality
     , PassUrl
-    , RespEmail
-    , RespInfEmail
+    , Resp
+    , RespInf
     ]
 
 
@@ -234,8 +287,11 @@ trimFields form =
         , respSelect = form.respSelect
         , respSelected = form.respSelected
         , people = form.people
-        -- , respInfSelect = form.respInfSelect
-        -- , respInfSelected = form.respInfSelected
+        , respInfSelect = form.respInfSelect
+        , respInfSelected = form.respInfSelected
+        , uoList = form.uoList
+        , uoSelect = form.uoSelect
+        , uoSelected = form.uoSelected
         }
 
 -- https://web.archive.org/web/20170717174432/https://ipsec.pl/python/2017/input-validation-free-form-unicode-text-python.html/
@@ -277,22 +333,30 @@ validateField (Trimmed form) field =
                         else []
 
                       Nothing -> [ "l'url del progetto su Pass non e' valido"]
+            
+            Resp ->
+              let errmsg = ["occorre selezionare almeno un responsabile per il sistema"] in
+              case form.respSelected of
+                Nothing -> errmsg
+                Just r ->
+                  if r.email == Utils.Email.emptyEmail 
+                  then errmsg
+                  else []
 
-            RespEmail ->
-                if String.isEmpty form.respEmail then
-                    [ "Il nome del responsabile del sistema informativo non puo' essere lasciato in bianco" ]
-
-                else 
-                  case Email.fromString form.respEmail of
-                    Just _  -> []
-                    Nothing -> ["Il formato dell'email non e' corretto"]
-
-            RespInfEmail ->
-                case Email.fromString form.respInfEmail of
-                    Just _  -> []
-                    Nothing -> ["Il formato dell'email non e' corretto"]
-
-
+            RespInf ->
+              let errmsg = ["occorre indicare almeno un responsabile informatico per il sistema"] in
+              case form.respSelected of
+                Nothing -> errmsg
+                Just r -> 
+                  if String.contains "infor" r.uo 
+                  then []
+                  else 
+                    case form.respInfSelected of
+                      Nothing -> errmsg
+                      Just ri -> 
+                        if ri.email == Utils.Email.emptyEmail
+                        then errmsg
+                        else []
 
 --- VIEW
 
@@ -310,31 +374,65 @@ type Msg
     | EnteredRespInfEmail String
     | SubmittedForm
     ---
-    | HandlePeopleResponse (WebData Data.Person.People)
-    -- | GetPeople
+    | HandlePeopleResponse  (WebData Data.Person.People)
+    | HandleUOResponse      (WebData (List UO))
     ---
     | HandleRespSelectUpdate (SingleSelect.Msg Person)
     | HandleRespSelection (Person, SingleSelect.Msg Person)
-    -- | HandleRespInfSelectUpdate (SingleSelect.Msg Data.People.People)
-    -- | HandleRespInfSelection (Data.People.People, SingleSelect.Msg Data.People.People)
+    | HandleRespInfSelectUpdate (SingleSelect.Msg Person)
+    | HandleRespInfSelection (Person, SingleSelect.Msg Person)
+    | HandleUOSelectUpdate (SingleSelect.Msg UO)
+    | HandleUOSelection (UO, SingleSelect.Msg UO)
+
+view : (Msg -> msg) -> {m | form : Form, problems : List (Problem ValidatedField)} -> Html.Html msg
+view toMsg {form, problems} =
+  div 
+  [ class "container mb-8 mt-8 pt-8"
+  ]            
+  [ div [class "row"]
+      [ div [ class "col-md-8 offset-md-3 col-xs-12" ]
+          [ ul [ class "error-messages" ]
+              (List.map viewProblem problems)
+          
+          ]
+      ]
+
+  , viewForm toMsg form
+  ]
+
 
 viewForm : (Msg -> msg) -> Form -> Html.Html msg
 viewForm toMsg form =
     let
         inputClasses =
-            class "form-control form-control-lg"
+            class "form-control"
 
-        fieldGroup =
-            Html.fieldset [ class "form-group form-floating" ]
+        fieldGroup : Int -> List (Html msg) -> Html msg
+        fieldGroup size =
+            Html.fieldset [ class ("form-group col-md-" ++ (String.fromInt size)) ]
 
-        lbl dest val =
-            Html.label [ for dest, class "form-label" ] [ Html.text val ]
+        lbl_ dest val customClass = 
+          Html.label 
+            [ for dest, class ("form-label" ++ " " ++ customClass) ] 
+            [ Html.text val ]
 
+        lblForStr dest val data =
+          let
+            classes = 
+              if String.isEmpty data
+              then ""
+              else "active"
+          in
+            lbl_ dest val classes
+
+        lbl dest val = lbl_ dest val ""
         onin message = Html.Events.onInput (toMsg << message) 
-    in
+
+        defSize = 12
+    in    
     Html.form [ onSubmit (toMsg SubmittedForm), class "form-floating" ]
-      [ fieldGroup
-          [ lbl "name" "Nome sistema"
+      [ fieldGroup defSize
+          [ lblForStr "name" "Nome sistema" form.name
           , Html.input
               [ inputClasses
               , placeholder "Nome del sistema informativo"
@@ -346,27 +444,10 @@ viewForm toMsg form =
               []
           ]
       
-      , fieldGroup
-          [ lbl "resp" "Responsabile del sistema"
-          , div 
-            [ style "width" "500px", style "margin-bottom" "1rem" ]
-            ( Utils.UI.viewRemoteData 
-                ( \people ->
-                    ( SingleSelect.view 
-                        { selected = form.respSelected
-                        , optionLabelFn = \p -> p.fullname
-                        , options = people
-                        }
-                        form.respSelect
-                    ) |> Html.map toMsg |> List.singleton                                       
-                )
-                form.people
-            ) 
-            
-          ]
       
-      , fieldGroup
-          [ lbl "description" "Descrizione breve"
+      
+      , fieldGroup defSize
+          [ lblForStr "description" "Descrizione breve" form.description
           , textarea
               [ inputClasses
               , placeholder "Descrizione breve del sistema informativo"
@@ -380,8 +461,8 @@ viewForm toMsg form =
               ]
               []
           ]
-      , fieldGroup
-          [ lbl "finality" "Descrizione estesa"
+      , fieldGroup defSize
+          [ lblForStr "finality" "Descrizione estesa" form.finality
           , textarea
               [ inputClasses
               , placeholder "indicare scopo, finalita', scenari utili"
@@ -390,13 +471,29 @@ viewForm toMsg form =
               , id "finality"
 
               -- , type_ "text"
-              , rows 10
+              , rows 5
               , height 10
               ]
               []
           ]
-      , fieldGroup
-          [ lbl "pass_url" "Url del progetto su Pass"
+      , fieldGroup defSize
+          [ lbl_ "uo" "Unita' Organizzativa di competenza" "active"
+          , div [ style "text-align" "left" ]
+            ( Utils.UI.viewRemoteData 
+                ( \uo ->
+                    ( SingleSelect.view 
+                        { selected = form.uoSelected
+                        , optionLabelFn = \p -> p.description
+                        , options = uo
+                        }
+                        form.uoSelect
+                    ) |> Html.map toMsg |> List.singleton                                       
+                )
+                form.uoList
+            )            
+          ]
+      , fieldGroup defSize
+          [ lblForStr "pass_url" "Url del progetto su Pass" form.passUrl
           , input
               [ inputClasses
               , placeholder "indirizzo del progetot su Pass"
@@ -407,31 +504,40 @@ viewForm toMsg form =
               ]
               []
           ]
-      , fieldGroup
-          [ lbl "resp_email" "Email Responsabile del sistema"
-          , input
-              [ inputClasses
-              , placeholder "email del resonsabile del sistema informativo"
-              , onin EnteredRespEmail
-              , value form.respEmail
-              , id "resp_email"
-              , type_ "email"
-              ]
-              []
+      , div [ class "row" ]
+        [ fieldGroup 4
+          [ lbl_ "resp" "Responsabile del sistema" "active"
+          , div [ style "text-align" "left" ]
+            ( Utils.UI.viewRemoteData 
+                ( \people ->
+                    ( SingleSelect.view 
+                        { selected = form.respSelected
+                        , optionLabelFn = \p -> p.fullname
+                        , options = people
+                        }
+                        form.respSelect
+                    ) |> Html.map toMsg |> List.singleton                                       
+                )
+                form.people
+            )            
+          ]  
+        , fieldGroup 4
+          [ lbl_ "resp" "Responsabile informatico del sistema" "active"
+          , div [ style "text-align" "left" ]
+            ( Utils.UI.viewRemoteData 
+                ( \people ->
+                    ( SingleSelect.view 
+                        { selected = form.respInfSelected
+                        , optionLabelFn = \p -> p.fullname
+                        , options = people
+                        }
+                        form.respInfSelect
+                    ) |> Html.map toMsg |> List.singleton                                       
+                )
+                form.people
+            )            
           ]
-      , fieldGroup
-          [ lbl "resp_inf_email" "Email Responsabile del sistema"
-          , input
-              [ inputClasses
-              , placeholder "email del resonsabile del sistema informativo"
-              , onin EnteredRespInfEmail
-              , value form.respInfEmail
-              , id "resp_inf_email"
-              , type_ "email"
-              ]
-              []
-          ]
-      
+        ]  
 
       , div
           [ class "d-grid gap-2 d-md-flex justify-content-md-end" ]
@@ -441,8 +547,8 @@ viewForm toMsg form =
               ]
               [ text "Annulla" ]
           , button
-              [ class "btn btn-lg btn-primary pull-xs-right" ]
-              [ text "Conferma" ]
+              [ class "btn btn-lg btn-primary pull-xs-right"]
+              [ text "Salva" ]
           ]
       ]
       

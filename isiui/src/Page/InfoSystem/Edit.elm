@@ -14,9 +14,9 @@ import Data.InfoSystem as InfoSys exposing (InfoSystem)
 import Api exposing (apiConfig)
 
 import Page.InfoSystem.Form as Form
-import Utils.Error.HttpError as HttpError
-import Utils.Error.EditProblem as Problem
 
+import Utils.Error.EditProblem as Problem
+import Route
 import Session.Session as Session
 import Page.InfoSystem.Form exposing (infoSys2Form)
 import Data.InfoSysSummary as InfoSysSummary 
@@ -26,6 +26,10 @@ import Postgrest.Queries as Q
 import SingleSelect
 import Utils.UI
 import Data.Person
+import Data.Person exposing (Person)
+import Email
+import Route
+import Data.UO exposing (UO)
 
 
 {-| Editing request flow
@@ -102,7 +106,7 @@ qry isID =
 
 type Msg
     = ISReceived (WebData InfoSystem) -- info system received
-    -- | SaveIS
+    | ISSaved (WebData InfoSystem)
     -- input messages
     | FormMsg Form.Msg
     
@@ -125,7 +129,7 @@ update msg model =
               RemoteData.Success is ->
                 let
                   f_ = Form.infoSys2Form is
-                  form = { f_ | people = RemoteData.Loading }
+                  form = { f_ | people = RemoteData.Loading, uoList = RemoteData.Loading }
                   
                 in
                                  
@@ -133,7 +137,10 @@ update msg model =
                   | infosys = data 
                   , form = form
                   }
-                , (Form.fetchPeople model |> Cmd.map FormMsg)
+                , ( List.map (Cmd.map FormMsg) 
+                      [Form.fetchPeople model , Form.fetchUO model ]
+                    |> Cmd.batch
+                  )
                 )
               _ ->
                 ( { model 
@@ -142,7 +149,18 @@ update msg model =
                 , Cmd.none 
                 )
 
-        
+        ISSaved data ->
+          case data of
+            RemoteData.Success _ -> 
+              ( model
+              , Session.navKey model.session.session
+                |> Route.pushUrl Route.ISList 
+              )
+            _ -> 
+              let 
+                _ = Debug.log "stato non previsto in fase di salvataggio"
+              in (model,Cmd.none)
+
 
         ------ form input
         FormMsg formMsg ->
@@ -176,6 +194,7 @@ update msg model =
                         ( { model | problems = problems }
                         , Cmd.none
                         )
+                        
 
               Form.HandlePeopleResponse data ->
                 let
@@ -184,11 +203,52 @@ update msg model =
                       RemoteData.Success p -> 
                         RemoteData.Success (Data.Person.emptyPerson :: p)
                       _ -> data
+
+
+                  peopleSel : String -> Maybe Person
+                  peopleSel e = 
+                    case data of
+                      RemoteData.Success p ->
+                        List.filter (\pers -> (Email.toString pers.email) == e ) p
+                        |> List.head
+                      _ -> Nothing
+
+                  respSel = peopleSel model.form.respEmail
+                  
+                  respInfSel = peopleSel model.form.respInfEmail
+                    
                 in
                 updateForm 
-                  (\f -> { f | people = people })
+                  (\f -> 
+                      { f 
+                      | people = people 
+                      , respSelected = respSel 
+                      , respInfSelected = respInfSel
+                      }
+                  )
                   Cmd.none
 
+              Form.HandleUOResponse data ->
+                let
+                  uoSel : Maybe UO
+                  uoSel = 
+                    case data of
+                      RemoteData.Success uoList ->
+                        List.filter (\uo -> uo.id == model.form.uo ) uoList
+                        |> List.head
+                      _ -> Nothing
+                   
+                in
+                updateForm 
+                  (\f -> 
+                      { f 
+                      | uoList = data 
+                      , uoSelected = uoSel
+                      }
+                  )
+                  Cmd.none
+
+              -----
               Form.HandleRespSelectUpdate sMsg ->
                 let
                     ( updatedSelect, selectCmd ) =
@@ -214,6 +274,56 @@ update msg model =
                     , respSelect = updatedSelect })  
                   (selectCmd |> Cmd.map FormMsg)
 
+              Form.HandleRespInfSelectUpdate sMsg ->
+                let
+                    ( updatedSelect, selectCmd ) =
+                        SingleSelect.update sMsg 
+                          -- (Api.peopleRemoteSearchAttrs model.session) 
+                          model.form.respInfSelect
+                in
+                updateForm 
+                  (\form -> { form | respInfSelect = updatedSelect })  
+                  (selectCmd |> Cmd.map FormMsg)
+
+              Form.HandleRespInfSelection ( person , sMsg ) ->
+                let
+                    ( updatedSelect, selectCmd ) =
+                        SingleSelect.update sMsg 
+                          -- (Api.peopleRemoteSearchAttrs model.session) 
+                          model.form.respInfSelect
+                in
+                updateForm 
+                  (\form -> 
+                    { form 
+                    | respInfSelected = Just person
+                    , respInfSelect = updatedSelect })  
+                  (selectCmd |> Cmd.map FormMsg)
+              ----
+              Form.HandleUOSelectUpdate sMsg ->
+                let
+                    ( updatedSelect, selectCmd ) =
+                        SingleSelect.update sMsg 
+                          -- (Api.peopleRemoteSearchAttrs model.session) 
+                          model.form.uoSelect
+                in
+                updateForm 
+                  (\form -> { form | uoSelect = updatedSelect })  
+                  (selectCmd |> Cmd.map FormMsg)
+
+              Form.HandleUOSelection ( uo , sMsg ) ->
+                let
+                    ( updatedSelect, selectCmd ) =
+                        SingleSelect.update sMsg 
+                          -- (Api.peopleRemoteSearchAttrs model.session) 
+                          model.form.uoSelect
+                in
+                updateForm 
+                  (\form -> 
+                    { form 
+                    | uoSelected = Just uo
+                    , uoSelect = updatedSelect })  
+                  (selectCmd |> Cmd.map FormMsg)
+
 
                 
 
@@ -224,20 +334,41 @@ update msg model =
 {- The select module uses a subscription to determine when to close (outside of a selection) -}
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    SingleSelect.subscriptions model.form.respSelect
-    |> Sub.map FormMsg
+  List.map (Sub.map FormMsg)
+    [ SingleSelect.subscriptions model.form.respSelect
+    , SingleSelect.subscriptions model.form.respInfSelect
+    , SingleSelect.subscriptions model.form.uoSelect
+    ]
+  |> Sub.batch
 
 
 ----- SAVE
 
 submit : Session.Model -> Form.TrimmedForm -> Cmd Msg
 submit session f =
+  let
+    infosys = Form.form2infoSys f
+    id = Maybe.map InfoSysSummary.idToInt infosys.id 
+          |> Maybe.withDefault 0
+    url = 
+      (Session.getApi session |> Url.toString ) ++ "/info_system?" 
+      ++ ( [ Q.param "id" (Q.eq (Q.int id))        
+           ] |> Q.toQueryString
+         )
+    
+    body = InfoSys.encoder infosys
+
+    reqConfig = 
+      apiConfig session.session
+      |> Api.apiSingleResult
+      |> Api.configWithRepresentation
+      |> Api.apiConfigToRequestConfig
+      
+  in
     case Session.viewer session.session of
       Just _ -> 
-        RemoteData.Http.patchWithConfig 
-          (Api.qryWithRepresentationConfig session.session)-- optimization possible with Postgres
-          ((Session.getApi session |> Url.toString ) ++ "/info_system")
-          ISReceived InfoSys.decoder (InfoSys.encoder <| Form.form2infoSys f)
+        RemoteData.Http.patchWithConfig reqConfig url
+          ISSaved InfoSys.decoder body
 
       Nothing ->
         Cmd.none
@@ -261,21 +392,9 @@ view model =
 viewIS : Model -> List (Html Msg)
 viewIS model =
   Utils.UI.viewRemoteData 
-    (\_ -> [Form.viewForm FormMsg model.form]) model.infosys
+    (\_ -> [Form.view FormMsg model]) model.infosys
 
-    -- case model.infosys of
-    --     RemoteData.NotAsked ->
-    --         text "dormo"
-
-    --     RemoteData.Loading ->
-    --         h3 [] [ text "Caricamento del sistema in corso..." ]
-
-    --     RemoteData.Success _ ->
-    --         Form.viewForm FormMsg model.form
-
-    --     RemoteData.Failure httpError ->
-    --         viewFetchError (HttpError.buildErrorMessage httpError)
-            
+         
 
 -- viewFetchError : String -> Html Msg
 -- viewFetchError errorMessage =

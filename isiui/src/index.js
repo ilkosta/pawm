@@ -31,41 +31,31 @@ const supabase = createClient(
 
 
 // load of some constant resources into localstorage
-async function loadResource(key, table) {
-  let stored = localStorage.getItem(key);
-  if (stored) {
-    stored = JSON.parse(stored);
-    let days_old = Math.floor((now - stored.at) / (1000 * 60 * 60 * 24));
-    if (days_old > 30) {
-      let { data: data, error } = await supabase
-        .from(table)
-        .select('*');
+// async function loadResource(key, table) {
+//   let stored = localStorage.getItem(key);
+//   if (stored) {
+//     stored = JSON.parse(stored);
+//     let days_old = Math.floor((now - stored.at) / (1000 * 60 * 60 * 24));
+//     if (days_old > 30) {
+//       let { data: data, error } = await supabase
+//         .from(table)
+//         .select('*');
 
-      if (error) {
-        return console.error("Errore aggiornando le UO");
-      }
+//       if (error) {
+//         return console.error("Errore aggiornando le UO");
+//       }
 
-      let uodata = { at: now, data: data };
-      localStorage.setItem(key, JSON.stringify(uodata));
-    }
-  }
-}
+//       let uodata = { at: now, data: data };
+//       localStorage.setItem(key, JSON.stringify(uodata));
+//     }
+//   }
+// }
 
 
 
 function getToken() {
   return JSON.parse(localStorage.getItem(storageKey));
 }
-
-/**
- * storage mechanics:
- * 1- when Elm starts up, we pass the current value of `localStorge` via flags
- * 2- the app subscribe to `save` port for events from Elm
- * 3- when the Elm app sends a `save` event, we store the data in `localStorage` 
- *    and reload the storage state on the Elm side
- * 
- * see src/Storage.elm for the Elm side
- */
 
 // laoding of the localStorage at start up
 function initElm() {
@@ -75,18 +65,18 @@ function initElm() {
 }
 
 
-const storageUO = "uo";
-const storageAddressBook = "address-book";
+// const storageUO = "uo";
+// const storageAddressBook = "address-book";
 
-loadResource(storageUO, "uo");
-loadResource(storageAddressBook, "address_book");
+// loadResource(storageUO, "uo");
+// loadResource(storageAddressBook, "address_book");
 
 const app = initElm();
 
 
 function renewToken() {
 
-  let token = getToken()
+  let token = getToken();
   if (!token)
     return;
 
@@ -151,6 +141,12 @@ app.ports.login.subscribe(async () => {
     }
     console.error(msgerr);
   }
+});
+
+app.ports.logout.subscribe(async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error)
+    console.error(error);
 });
 
 // If you want your app to work offline and load faster, you can change

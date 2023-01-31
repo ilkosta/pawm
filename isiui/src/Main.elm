@@ -116,6 +116,8 @@ init flags url navKey =
 type Msg
     = LinkClicked UrlRequest
     | UrlChanged Url
+    | LoginMsg
+    | LogoutMsg
     ---- js events
     | GotSession Session.Model
     ---- page events
@@ -196,11 +198,11 @@ view : Model -> Document Msg
 view model =
   let
     viewer = Session.viewer model.session.session
-    viewPage = Page.viewPage viewer
+    viewPage = Page.viewPage (LoginMsg,LogoutMsg) viewer
   in
     case model.page of
         NotFoundPage ->
-          viewPage NotFoundPage
+          viewPage NotFoundPage 
           { title = "mmm"
           , content = [Page.NotFound.view]
           }
@@ -268,6 +270,9 @@ update msg model =
             in
             ( { model | route = newRoute }, Cmd.none )
                 |> initCurrentPage
+
+        (LogoutMsg, _) -> (model, Api.logout ())
+        (LoginMsg, _) -> (model, Api.login ())
         -----------------------------
         ( GotSession session, _ ) ->
             -- forward the updated model.session 
@@ -317,7 +322,7 @@ update msg model =
         
         -----------------------------
 
-
+        
 
         ( _, _ ) -> -- FIXME: antipattern: hide compiler checks - maybe ok for initials fast iterations... 
             ( model, Cmd.none )
