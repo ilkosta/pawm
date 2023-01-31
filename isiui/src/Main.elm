@@ -293,6 +293,8 @@ update msg model =
             
         -----------------------------
         -- page mapping
+
+        -- list
         ( ListPageMsg subMsg, ListPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
@@ -302,6 +304,7 @@ update msg model =
             , Cmd.map ListPageMsg updatedCmd
             )
 
+        -- edit
         ( ISEditPageMsg subMsg, ISEditPage pageModel ) ->
             let
                 ( updatedPageModel, updatedCmd ) =
@@ -310,6 +313,8 @@ update msg model =
             ( { model | page = ISEditPage updatedPageModel }
             , Cmd.map ISEditPageMsg updatedCmd
             )
+
+        
         -----------------------------
 
 
@@ -352,12 +357,15 @@ subscriptions model =
           
           ListPage m -> 
             Sub.map ListPageMsg (ListInfoSys.subscriptions m)
+
+          ISEditPage m ->
+            Sub.map ISEditPageMsg (ISEdit.subscriptions m)
             
           _ -> Sub.none
   in
   
   Sub.batch
-  [ tokenUpdate GotSession , pagesMgs]
+    [ tokenUpdate GotSession , pagesMgs]
 
   
 

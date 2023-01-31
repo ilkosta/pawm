@@ -30,6 +30,27 @@ const supabase = createClient(
 );
 
 
+// load of some constant resources into localstorage
+async function loadResource(key, table) {
+  let stored = localStorage.getItem(key);
+  if (stored) {
+    stored = JSON.parse(stored);
+    let days_old = Math.floor((now - stored.at) / (1000 * 60 * 60 * 24));
+    if (days_old > 30) {
+      let { data: data, error } = await supabase
+        .from(table)
+        .select('*');
+
+      if (error) {
+        return console.error("Errore aggiornando le UO");
+      }
+
+      let uodata = { at: now, data: data };
+      localStorage.setItem(key, JSON.stringify(uodata));
+    }
+  }
+}
+
 
 
 function getToken() {
@@ -52,6 +73,13 @@ function initElm() {
   console.log(`flags di inizializzazione: ${JSON.stringify(flags)}`);
   return Elm.Main.init({ node: document.getElementById('root'), flags: flags });
 }
+
+
+const storageUO = "uo";
+const storageAddressBook = "address-book";
+
+loadResource(storageUO, "uo");
+loadResource(storageAddressBook, "address_book");
 
 const app = initElm();
 
@@ -97,6 +125,9 @@ if (getToken() && getToken().expires_at > now) {
   let renew_at = getToken().expires_at - 300000; // 5 minuti
   setTimeout(renewtoken, renew_at - now);
 }
+
+
+
 
 
 app.ports.login.subscribe(async () => {

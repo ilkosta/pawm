@@ -39,7 +39,7 @@ viewRemoteData f data =
         [ h3 [] [text "caricamento in corso" ] ]
 
     RemoteData.NotAsked ->
-        [ h3 [][ text "non avviato" ]]
+        [ {- h3 [][ text "non avviato" ]  -} ]
 
     RemoteData.Failure error ->
         [ h3 [] [text (buildErrorMessage error)] ]
@@ -64,3 +64,5 @@ buildErrorMessage httpError =
         Http.BadBody message ->
           "Ops! ho ricevuto una risposta che non mi aspettavo: " ++ 
             message
+
+

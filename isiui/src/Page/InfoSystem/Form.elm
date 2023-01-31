@@ -5,6 +5,7 @@ module Page.InfoSystem.Form exposing
     , TrimmedForm 
     , infoSys2Form
     , form2infoSys
+    , fetchPeople
 
     , viewForm
     , validate
@@ -22,10 +23,22 @@ import Utils.Error.EditProblem as Prob exposing (Problem, viewProblem)
 import Email
 import Route
 import Utils.Url exposing (emptyUrl)
-
+import SingleSelect
+import Data.Person exposing (Person)
+import Api
+import RemoteData exposing (WebData)
+import RemoteData.Http
+import Json.Decode as Decode
+import Session.Session as Session
+import Postgrest.Queries as Q
+import Utils.UI
 
 {-| Recording validation problems on a per-field basis facilitates displaying
 them inline next to the field where the error occurred.
+
+This facilitate the applications of owasp reccomandations 
+https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+by isolating in a uniq module the form management
 
 (The other part of this is having a view function like this:
 
@@ -58,8 +71,24 @@ type alias Form =
     , passUrl : String
     , respEmail : String
     , respInfEmail : String
+    , respSelect : SingleSelect.SmartSelect Msg Person
+    , respSelected : Maybe Person
+    , people : WebData Data.Person.People
+    -- , respInfSelect : SingleSelect.SmartSelect Msg Data.People.People
+    -- , respInfSelected : Maybe Data.People.People
     }
 
+initPersonSelect : 
+  (( Person, SingleSelect.Msg Person ) -> Msg) 
+  -> (SingleSelect.Msg Person -> Msg)
+  -> SingleSelect.SmartSelect Msg Person
+initPersonSelect hSelection hSelectUpdate =
+  SingleSelect.init 
+    { selectionMsg = hSelection 
+    , internalMsg = hSelectUpdate
+    -- , characterSearchThreshold = 3
+    -- , debounceDuration = 500.0 -- milliseconds
+    }
 
 emptyForm : Form
 emptyForm =
@@ -71,6 +100,14 @@ emptyForm =
     , passUrl = ""
     , respEmail = ""
     , respInfEmail = ""
+    ---
+    , respSelect = 
+        initPersonSelect 
+          HandleRespSelection
+          HandleRespSelectUpdate        
+    , respSelected = Nothing
+    , people = RemoteData.NotAsked
+
     }
 
 
@@ -88,7 +125,36 @@ infoSys2Form is =
     , respInfEmail = 
         Maybe.map Email.toString is.respInf
         |> Maybe.withDefault ""
+    , respSelected = Nothing
+    , respSelect = 
+        initPersonSelect 
+          HandleRespSelection
+          HandleRespSelectUpdate
+    , people = RemoteData.NotAsked
+
     }
+
+
+------
+
+fetchPeople : {a | session : Session.Model} -> Cmd Msg
+fetchPeople {session} = 
+  let
+    reqConfig = 
+      Api.apiConfig session.session
+      |> Api.apiConfigToRequestConfig
+    
+    baseUrl = Session.getApi session |> Url.toString
+    url = 
+      baseUrl ++ "address_book?" ++
+      ( [ Q.select <| Q.attributes ["fullname","pa_role","legal_structure_name","email"]
+        , Q.order [Q.asc "id" ]
+        ] |> Q.toQueryString
+      )
+  in
+    RemoteData.Http.getWithConfig reqConfig url
+      HandlePeopleResponse (Decode.list Data.Person.decoder)
+------
 
 form2infoSys : TrimmedForm -> InfoSystem
 form2infoSys (Trimmed f)  =
@@ -165,8 +231,18 @@ trimFields form =
         , passUrl = String.trim form.passUrl
         , respEmail = String.trim form.respEmail
         , respInfEmail = String.trim form.respInfEmail
+        , respSelect = form.respSelect
+        , respSelected = form.respSelected
+        , people = form.people
+        -- , respInfSelect = form.respInfSelect
+        -- , respInfSelected = form.respInfSelected
         }
 
+-- https://web.archive.org/web/20170717174432/https://ipsec.pl/python/2017/input-validation-free-form-unicode-text-python.html/
+unicodeNormalize : Form -> Form
+unicodeNormalize form = 
+  -- TODO: da implementare
+  form
 
 validateField : TrimmedForm -> ValidatedField -> List (Problem ValidatedField)
 validateField (Trimmed form) field =
@@ -233,7 +309,14 @@ type Msg
     | EnteredRespEmail String
     | EnteredRespInfEmail String
     | SubmittedForm
-
+    ---
+    | HandlePeopleResponse (WebData Data.Person.People)
+    -- | GetPeople
+    ---
+    | HandleRespSelectUpdate (SingleSelect.Msg Person)
+    | HandleRespSelection (Person, SingleSelect.Msg Person)
+    -- | HandleRespInfSelectUpdate (SingleSelect.Msg Data.People.People)
+    -- | HandleRespInfSelection (Data.People.People, SingleSelect.Msg Data.People.People)
 
 viewForm : (Msg -> msg) -> Form -> Html.Html msg
 viewForm toMsg form =
@@ -263,6 +346,24 @@ viewForm toMsg form =
               []
           ]
       
+      , fieldGroup
+          [ lbl "resp" "Responsabile del sistema"
+          , div 
+            [ style "width" "500px", style "margin-bottom" "1rem" ]
+            ( Utils.UI.viewRemoteData 
+                ( \people ->
+                    ( SingleSelect.view 
+                        { selected = form.respSelected
+                        , optionLabelFn = \p -> p.fullname
+                        , options = people
+                        }
+                        form.respSelect
+                    ) |> Html.map toMsg |> List.singleton                                       
+                )
+                form.people
+            ) 
+            
+          ]
       
       , fieldGroup
           [ lbl "description" "Descrizione breve"
@@ -330,6 +431,8 @@ viewForm toMsg form =
               ]
               []
           ]
+      
+
       , div
           [ class "d-grid gap-2 d-md-flex justify-content-md-end" ]
           [ a

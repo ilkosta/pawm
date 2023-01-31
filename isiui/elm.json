@@ -18,14 +18,19 @@
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "krisajenkins/remotedata": "6.0.1",
+            "marcosh/elm-html-to-unicode": "1.0.4",
+            "mercurymedia/elm-smart-select": "3.0.3",
             "ohanhi/remotedata-http": "4.0.0",
             "waratuman/json-extra": "1.0.2"
         },
         "indirect": {
+            "avh4/elm-color": "1.0.0",
+            "damienklinnert/elm-spinner": "3.0.2",
             "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
             "elm/parser": "1.1.0",
             "elm/virtual-dom": "1.0.3",
+            "jinjor/elm-debounce": "3.0.0",
             "justinmimbs/timezone-data": "2.1.4",
             "rtfeldman/elm-iso8601-date-strings": "1.1.4",
             "waratuman/time-extra": "1.1.0"

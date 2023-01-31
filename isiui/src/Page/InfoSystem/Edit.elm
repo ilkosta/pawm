@@ -23,7 +23,9 @@ import Data.InfoSysSummary as InfoSysSummary
 import InfoSysSummary
 
 import Postgrest.Queries as Q
-
+import SingleSelect
+import Utils.UI
+import Data.Person
 
 
 {-| Editing request flow
@@ -84,6 +86,9 @@ fetchData session isID =
     url ISReceived InfoSys.decoder
 
 
+
+
+
 qry : InfoSysId -> Q.Params
 qry isID = 
   let
@@ -100,6 +105,7 @@ type Msg
     -- | SaveIS
     -- input messages
     | FormMsg Form.Msg
+    
 
 
 
@@ -108,20 +114,26 @@ update msg model =
   let
     -- Helper function for `update`. Updates the form and returns Cmd.none.
     -- Useful for recording form fields!
-    updateForm : (Form.Form -> Form.Form) -> ( Model, Cmd Msg )
-    updateForm transform =
-        ( { model | form = transform model.form }, Cmd.none )
+    updateForm : (Form.Form -> Form.Form) -> Cmd Msg -> ( Model, Cmd Msg )
+    updateForm transform cmd =
+        ( { model | form = transform model.form }, cmd )
   in
     case msg of
 
         ISReceived data ->          
           case data of
-              RemoteData.Success is ->                 
+              RemoteData.Success is ->
+                let
+                  f_ = Form.infoSys2Form is
+                  form = { f_ | people = RemoteData.Loading }
+                  
+                in
+                                 
                 ( { model 
                   | infosys = data 
-                  , form = Form.infoSys2Form is
+                  , form = form
                   }
-                , Cmd.none 
+                , (Form.fetchPeople model |> Cmd.map FormMsg)
                 )
               _ ->
                 ( { model 
@@ -136,22 +148,22 @@ update msg model =
         FormMsg formMsg ->
           case formMsg of
               Form.EnteredName val ->
-                updateForm (\form -> { form | name = val }) 
+                updateForm (\form -> { form | name = val }) Cmd.none
 
               Form.EnteredDescription val ->
-                  updateForm (\form -> { form | description = val }) 
+                  updateForm (\form -> { form | description = val }) Cmd.none
 
               Form.EnteredFinality val ->
-                  updateForm (\form -> { form | finality = val }) 
+                  updateForm (\form -> { form | finality = val })  Cmd.none
               
               Form.EnteredPassUrl val ->
-                  updateForm (\form -> { form | passUrl = val }) 
+                  updateForm (\form -> { form | passUrl = val })  Cmd.none
 
               Form.EnteredRespEmail val ->
-                  updateForm (\form -> { form | respEmail = val }) 
+                  updateForm (\form -> { form | respEmail = val })  Cmd.none
 
               Form.EnteredRespInfEmail val ->
-                  updateForm (\form -> { form | respInfEmail = val }) 
+                  updateForm (\form -> { form | respInfEmail = val })  Cmd.none
 
               Form.SubmittedForm ->
                 case Form.validate model.form of
@@ -164,7 +176,56 @@ update msg model =
                         ( { model | problems = problems }
                         , Cmd.none
                         )
-        -- _ -> (model, Cmd.none)
+
+              Form.HandlePeopleResponse data ->
+                let
+                  people =
+                    case data of 
+                      RemoteData.Success p -> 
+                        RemoteData.Success (Data.Person.emptyPerson :: p)
+                      _ -> data
+                in
+                updateForm 
+                  (\f -> { f | people = people })
+                  Cmd.none
+
+              Form.HandleRespSelectUpdate sMsg ->
+                let
+                    ( updatedSelect, selectCmd ) =
+                        SingleSelect.update sMsg 
+                          -- (Api.peopleRemoteSearchAttrs model.session) 
+                          model.form.respSelect
+                in
+                updateForm 
+                  (\form -> { form | respSelect = updatedSelect })  
+                  (selectCmd |> Cmd.map FormMsg)
+
+              Form.HandleRespSelection ( person , sMsg ) ->
+                let
+                    ( updatedSelect, selectCmd ) =
+                        SingleSelect.update sMsg 
+                          -- (Api.peopleRemoteSearchAttrs model.session) 
+                          model.form.respSelect
+                in
+                updateForm 
+                  (\form -> 
+                    { form 
+                    | respSelected = Just person
+                    , respSelect = updatedSelect })  
+                  (selectCmd |> Cmd.map FormMsg)
+
+
+                
+
+            ---
+            
+        --  _ -> (model, Cmd.none)
+
+{- The select module uses a subscription to determine when to close (outside of a selection) -}
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    SingleSelect.subscriptions model.form.respSelect
+    |> Sub.map FormMsg
 
 
 ----- SAVE
@@ -190,35 +251,40 @@ submit session f =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ h3 [] [ text "Modifica Sistema" ]
-        , viewIS model.infosys
-        ]
+  let
+    h = h3 [] [ text "Modifica Sistema"]
+  in
+    div [] (h :: (viewIS model))
+        
 
 
-viewIS : Data -> Html Msg
-viewIS is =
-    case is of
-        RemoteData.NotAsked ->
-            text ""
+viewIS : Model -> List (Html Msg)
+viewIS model =
+  Utils.UI.viewRemoteData 
+    (\_ -> [Form.viewForm FormMsg model.form]) model.infosys
 
-        RemoteData.Loading ->
-            h3 [] [ text "Caricamento del sistema in corso..." ]
+    -- case model.infosys of
+    --     RemoteData.NotAsked ->
+    --         text "dormo"
 
-        RemoteData.Success isData ->
-            Form.viewForm FormMsg <| infoSys2Form isData
+    --     RemoteData.Loading ->
+    --         h3 [] [ text "Caricamento del sistema in corso..." ]
 
-        RemoteData.Failure httpError ->
-            viewFetchError (HttpError.buildErrorMessage httpError)
+    --     RemoteData.Success _ ->
+    --         Form.viewForm FormMsg model.form
 
-viewFetchError : String -> Html Msg
-viewFetchError errorMessage =
-    let
-        errorHeading =
-            "Non posso caricare i sistemi al momento"
-    in
-    div []
-        [ h3 [] [ text errorHeading ]
-        , text ("Errore: " ++ errorMessage)
-        ]
+    --     RemoteData.Failure httpError ->
+    --         viewFetchError (HttpError.buildErrorMessage httpError)
+            
+
+-- viewFetchError : String -> Html Msg
+-- viewFetchError errorMessage =
+--     let
+--         errorHeading =
+--             "Non posso caricare i sistemi al momento"
+--     in
+--     div []
+--         [ h3 [] [ text errorHeading ]
+--         , text ("Errore: " ++ errorMessage)
+--         ]
 

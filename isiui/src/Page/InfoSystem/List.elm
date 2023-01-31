@@ -86,7 +86,7 @@ fetchIS {session, filters} =
   in
     RemoteData.Http.getWithConfig reqConfig
       url
-      InfosysReceived (Data.InfoSysSummary.decoder |> Decode.list)
+      InfosysReceived (Decode.list Data.InfoSysSummary.decoder)
 
 
 defaultListQry : Q.Params
