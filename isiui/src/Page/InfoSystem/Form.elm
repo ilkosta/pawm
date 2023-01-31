@@ -370,8 +370,8 @@ type Msg
     | EnteredDescription String
     | EnteredFinality String
     | EnteredPassUrl String
-    | EnteredRespEmail String
-    | EnteredRespInfEmail String
+    -- | EnteredRespEmail String
+    -- | EnteredRespInfEmail String
     | SubmittedForm
     ---
     | HandlePeopleResponse  (WebData Data.Person.People)
@@ -416,23 +416,14 @@ viewForm toMsg form =
             [ for dest, class ("form-label" ++ " " ++ customClass) ] 
             [ Html.text val ]
 
-        lblForStr dest val data =
-          let
-            classes = 
-              if String.isEmpty data
-              then ""
-              else "active"
-          in
-            lbl_ dest val classes
-
-        lbl dest val = lbl_ dest val ""
+        lbl dest val = lbl_ dest val "active"
         onin message = Html.Events.onInput (toMsg << message) 
 
         defSize = 12
     in    
     Html.form [ onSubmit (toMsg SubmittedForm), class "form-floating" ]
       [ fieldGroup defSize
-          [ lblForStr "name" "Nome sistema" form.name
+          [ lbl "name" "Nome sistema"
           , Html.input
               [ inputClasses
               , placeholder "Nome del sistema informativo"
@@ -447,7 +438,7 @@ viewForm toMsg form =
       
       
       , fieldGroup defSize
-          [ lblForStr "description" "Descrizione breve" form.description
+          [ lbl "description" "Descrizione breve"
           , textarea
               [ inputClasses
               , placeholder "Descrizione breve del sistema informativo"
@@ -457,12 +448,11 @@ viewForm toMsg form =
 
               -- , type_ "text"
               , rows 3
-              , height 3
               ]
               []
           ]
       , fieldGroup defSize
-          [ lblForStr "finality" "Descrizione estesa" form.finality
+          [ lbl "finality" "Descrizione estesa"
           , textarea
               [ inputClasses
               , placeholder "indicare scopo, finalita', scenari utili"
@@ -472,12 +462,11 @@ viewForm toMsg form =
 
               -- , type_ "text"
               , rows 5
-              , height 10
               ]
               []
           ]
       , fieldGroup defSize
-          [ lbl_ "uo" "Unita' Organizzativa di competenza" "active"
+          [ lbl "uo" "Unita' Organizzativa di competenza"
           , div [ style "text-align" "left" ]
             ( Utils.UI.viewRemoteData 
                 ( \uo ->
@@ -493,10 +482,10 @@ viewForm toMsg form =
             )            
           ]
       , fieldGroup defSize
-          [ lblForStr "pass_url" "Url del progetto su Pass" form.passUrl
+          [ lbl "pass_url" "Url del progetto su Pass"
           , input
               [ inputClasses
-              , placeholder "indirizzo del progetot su Pass"
+              , placeholder "indirizzo del progetto su Pass"
               , onin EnteredPassUrl
               , value form.passUrl
               , id "pass_url"
@@ -506,7 +495,7 @@ viewForm toMsg form =
           ]
       , div [ class "row" ]
         [ fieldGroup 4
-          [ lbl_ "resp" "Responsabile del sistema" "active"
+          [ lbl "resp" "Responsabile del sistema"
           , div [ style "text-align" "left" ]
             ( Utils.UI.viewRemoteData 
                 ( \people ->
@@ -522,7 +511,7 @@ viewForm toMsg form =
             )            
           ]  
         , fieldGroup 4
-          [ lbl_ "resp" "Responsabile informatico del sistema" "active"
+          [ lbl "resp" "Responsabile informatico del sistema"
           , div [ style "text-align" "left" ]
             ( Utils.UI.viewRemoteData 
                 ( \people ->
@@ -543,7 +532,7 @@ viewForm toMsg form =
           [ class "d-grid gap-2 d-md-flex justify-content-md-end" ]
           [ a
               [ class "btn btn-lg btn-outline-primary pull-xs-left"
-              , Route.href Route.Home
+              , Route.href Route.ISList
               ]
               [ text "Annulla" ]
           , button

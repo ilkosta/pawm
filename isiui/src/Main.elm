@@ -11,6 +11,8 @@ import Html exposing (..)
 
 import Page.InfoSystem.List as ListInfoSys
 import Page.InfoSystem.Edit as ISEdit
+import Page.InfoSystem.New  as ISNew
+
 import Route exposing (Route)
 import Session.Session as Session
 
@@ -121,7 +123,8 @@ type Msg
     ---- js events
     | GotSession Session.Model
     ---- page events
-    | ListPageMsg ListInfoSys.Msg 
+    | ListPageMsg ListInfoSys.Msg
+    | ISNewPageMsg ISNew.Msg
     | ISEditPageMsg ISEdit.Msg
     
 
@@ -159,6 +162,13 @@ initCurrentPage ( model, existingCmds ) =
                             ListInfoSys.init model.session
                     in
                     ( ListPage pageModel, Cmd.map ListPageMsg pageCmds )
+
+                Route.ISNew ->
+                    let
+                        ( pageModel, pageCmds ) =
+                            ISNew.init model.session
+                    in
+                    ( ISNewPage pageModel, Cmd.map ISNewPageMsg pageCmds )
 
                 Route.ISEdit sysid ->
                     let
@@ -219,6 +229,14 @@ view model =
           , content =  [ ListInfoSys.view pageModel
                       |> Html.map ListPageMsg 
                     ]
+          }
+
+        ISNewPage pageModel ->
+          viewPage (ISNewPage pageModel)
+          { title = "Nuovo Sistema"
+          , content = [ ISNew.view pageModel
+                        |> Html.map ISNewPageMsg
+                      ]
           }
 
         ISEditPage pageModel ->
@@ -307,6 +325,16 @@ update msg model =
             in
             ( { model | page = ListPage updatedPageModel }
             , Cmd.map ListPageMsg updatedCmd
+            )
+
+        -- new
+        ( ISNewPageMsg subMsg, ISNewPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    ISNew.update subMsg pageModel
+            in
+            ( { model | page = ISNewPage updatedPageModel }
+            , Cmd.map ISNewPageMsg updatedCmd
             )
 
         -- edit

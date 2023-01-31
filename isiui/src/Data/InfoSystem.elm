@@ -53,13 +53,17 @@ encoder i =
       then Encode.null
       else Encode.string f
   in
-  Encode.object
-    [ ( "id" , maybeEnc sysIdEnc i.id)
-    , ( "name", Encode.string i.name )
-    , ( "description", Encode.string i.description )
-    , ( "finality", optional i.finality )
-    , ( "uo_id", Encode.int i.uo )
-    , ( "pass_url", urlEnc i.passPrj )
-    , ( "resp_email", emailEnc i.resp )
-    , ( "resp_inf_email", maybeEnc emailEnc i.respInf )
-    ]    
+  Encode.object <|
+    List.append
+      (case i.id of 
+          Just id -> [( "id" , sysIdEnc id)]
+          Nothing -> [])
+    
+      [ ( "name", Encode.string i.name )
+      , ( "description", Encode.string i.description )
+      , ( "finality", optional i.finality )
+      , ( "uo_id", Encode.int i.uo )
+      , ( "pass_url", urlEnc i.passPrj )
+      , ( "resp_email", emailEnc i.resp )
+      , ( "resp_inf_email", maybeEnc emailEnc i.respInf )
+      ]    

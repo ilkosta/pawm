@@ -15,9 +15,11 @@ type Route
     = NotFound
     | Home
     | ISList
+    | ISNew
     -- | ISDetails InfoSysId
     | ISEdit InfoSysId
     | ISDetails InfoSysId
+    
     
 
 
@@ -36,6 +38,7 @@ matchRoute =
     oneOf
         [ map Home top
         , map ISList (s "sistemi")
+        , map ISNew (s "sistema" </> s "nuovo")
         -- , map ISDetails (s "sistemi" </> ISysSummary.idParser)
         , map ISEdit    (s "sistema" </> ISysSummary.idParser </> s "modifica")
         , map ISDetails (s "sistema" </> ISysSummary.idParser )
@@ -60,6 +63,8 @@ routeToPieces page =
 
         ISList ->
           ["sistemi"]
+
+        ISNew -> [ "sistema", "nuovo"]
 
         ISEdit id ->
           ["sistema", ISysSummary.idToString id, "modifica"  ]

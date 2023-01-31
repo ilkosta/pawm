@@ -14,6 +14,7 @@ import Browser exposing (Document)
 
 import Page.InfoSystem.List as ListInfoSys
 import Page.InfoSystem.Edit as ISEdit
+import Page.InfoSystem.New as ISNew
 
 
 import Session.Viewer exposing (Viewer)
@@ -21,7 +22,8 @@ import Session.Viewer exposing (Viewer)
 type Page
     = NotFoundPage
     | HomePage
-    | ListPage ListInfoSys.Model  
+    | ListPage ListInfoSys.Model
+    | ISNewPage ISNew.Model
     | ISEditPage ISEdit.Model
 
 
@@ -31,6 +33,7 @@ needAuth route =
       Route.Home -> False
       Route.NotFound -> False
       Route.ISList -> False
+      Route.ISNew -> True
       Route.ISEdit _ -> True
       Route.ISDetails _ -> False
 
@@ -146,7 +149,7 @@ navPages currPage maybeViewer =
       , linkTo Route.ISList "Elenco"
       ]
     privateLinks = 
-      [ -- TODO: aggiungere il menu per la pagina di nuovo
+      [ linkTo Route.ISNew "Nuovo"
       ]
     links = 
       if maybeViewer == Nothing 

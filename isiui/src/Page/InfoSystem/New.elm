@@ -1,4 +1,5 @@
-module Page.InfoSystem.Edit exposing (Model,Msg,view,init,update,subscriptions)
+module Page.InfoSystem.New exposing (Model,Msg,view,init,update,subscriptions)
+
 
 import RemoteData.Http
 import RemoteData exposing (WebData)
@@ -49,67 +50,49 @@ type alias Data = WebData InfoSystem
 
 type alias Model =
     { session : Session.Model
-    , infosys : Data
     , form : Form.Form
     , problems : List (Problem.Problem Form.ValidatedField)
     }
 
 
+type Msg
+    = ISSaved (WebData InfoSystem)
+    -- input messages
+    | FormMsg Form.Msg
+
 
 -- althought the Main can have the infosys record, it is reloaded from the Id 
 -- to prevent the risk that other client app has already modified the record that we want to edit
-init : InfoSysId -> Session.Model -> ( Model, Cmd Msg )
-init isId session =
-    ( initialModel session, fetchData session isId )
+init : Session.Model -> ( Model, Cmd Msg )
+init session =
+    ( initialModel session
+    , List.map (Cmd.map FormMsg) 
+        [ Form.fetchPeople {session = session} 
+        , Form.fetchUO {session = session} ]
+      |> Cmd.batch
+    )
 
-    
+
 initialModel :Session.Model -> Model
 initialModel session =
     { session = session
-    , infosys = RemoteData.Loading
     , form = Form.emptyForm
     , problems = []
     }
 
 
-fetchData : Session.Model -> InfoSysId -> Cmd Msg
-fetchData session isID =
+view : Model -> Html Msg
+view model =
   let
-    url = 
-      (Session.getApi session |> Url.toString) 
-      ++ "info_system?" 
-      ++ (Q.toQueryString <| qry isID) |> Debug.log "url api modifica: "
-
-    reqConfig = 
-      Api.apiConfig session.session
-      |> Api.apiSingleResult  
-      |> Api.apiConfigToRequestConfig
-
+    h = h3 [] [ text "Inserimento Nuovo Sistema"]
   in
-  RemoteData.Http.getWithConfig reqConfig
-    url ISReceived InfoSys.decoder
+    div [] (h :: (viewIS model))
+        
 
 
-
-
-
-qry : InfoSysId -> Q.Params
-qry isID = 
-  let
-    id = InfoSysSummary.idToInt isID |> Q.int
-  in
-  Q.attributes ["id","description","finality","uo_id","pass_url","name","resp_email","resp_inf_email"]
-  |> Q.select |> List.singleton
-  |> List.append [ Q.param "id" (Q.eq id) ]
-  
-
-
-type Msg
-    = ISReceived (WebData InfoSystem) -- info system received
-    | ISSaved (WebData InfoSystem)
-    -- input messages
-    | FormMsg Form.Msg
-    
+viewIS : Model -> List (Html Msg)
+viewIS model =
+  [Form.view FormMsg model]
 
 
 
@@ -123,31 +106,6 @@ update msg model =
         ( { model | form = transform model.form }, cmd )
   in
     case msg of
-
-        ISReceived data ->          
-          case data of
-              RemoteData.Success is ->
-                let
-                  f_ = Form.infoSys2Form is
-                  form = { f_ | people = RemoteData.Loading, uoList = RemoteData.Loading }
-                  
-                in
-                                 
-                ( { model 
-                  | infosys = data 
-                  , form = form
-                  }
-                , ( List.map (Cmd.map FormMsg) 
-                      [Form.fetchPeople model , Form.fetchUO model ]
-                    |> Cmd.batch
-                  )
-                )
-              _ ->
-                ( { model 
-                  | infosys = data 
-                  }
-                , Cmd.none 
-                )
 
         ISSaved data ->
           case data of
@@ -227,7 +185,7 @@ update msg model =
                   uoSel = 
                     case data of
                       RemoteData.Success uoList ->
-                        List.filter (\uo -> uo.id == model.form.uo ) uoList
+                        List.filter (\uo -> uo.id == 154) uoList
                         |> List.head
                       _ -> Nothing
                    
@@ -318,37 +276,14 @@ update msg model =
                   (selectCmd |> Cmd.map FormMsg)
 
 
-                
-
-            ---
-            
-        --  _ -> (model, Cmd.none)
-
-{- The select module uses a subscription to determine when to close (outside of a selection) -}
-subscriptions : Model -> Sub Msg
-subscriptions model =
-  List.map (Sub.map FormMsg)
-    [ SingleSelect.subscriptions model.form.respSelect
-    , SingleSelect.subscriptions model.form.respInfSelect
-    , SingleSelect.subscriptions model.form.uoSelect
-    ]
-  |> Sub.batch
-
-
------ SAVE
-
-submit : Session.Model -> Form.TrimmedForm -> Cmd Msg
 submit session f =
   let
     infosys = Form.form2infoSys f
     id = Maybe.map InfoSysSummary.idToInt infosys.id 
           |> Maybe.withDefault 0
     url = 
-      (Session.getApi session |> Url.toString ) ++ "/info_system?" 
-      ++ ( [ Q.param "id" (Q.eq (Q.int id))        
-           ] |> Q.toQueryString
-         )
-    
+      (Session.getApi session |> Url.toString ) ++ "/info_system" 
+      
     body = InfoSys.encoder infosys
 
     reqConfig = 
@@ -360,43 +295,19 @@ submit session f =
   in
     case Session.viewer session.session of
       Just _ -> 
-        RemoteData.Http.patchWithConfig reqConfig url
+        RemoteData.Http.postWithConfig reqConfig url
           ISSaved InfoSys.decoder body
 
       Nothing ->
         Cmd.none
 
 
-
-
------ VIEW            
-
-
-
-view : Model -> Html Msg
-view model =
-  let
-    h = h3 [] [ text "Modifica Sistema"]
-  in
-    div [] (h :: (viewIS model))
-        
-
-
-viewIS : Model -> List (Html Msg)
-viewIS model =
-  Utils.UI.viewRemoteData 
-    (\_ -> [Form.view FormMsg model]) model.infosys
-
-         
-
--- viewFetchError : String -> Html Msg
--- viewFetchError errorMessage =
---     let
---         errorHeading =
---             "Non posso caricare i sistemi al momento"
---     in
---     div []
---         [ h3 [] [ text errorHeading ]
---         , text ("Errore: " ++ errorMessage)
---         ]
-
+{- The select module uses a subscription to determine when to close (outside of a selection) -}
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  List.map (Sub.map FormMsg)
+    [ SingleSelect.subscriptions model.form.respSelect
+    , SingleSelect.subscriptions model.form.respInfSelect
+    , SingleSelect.subscriptions model.form.uoSelect
+    ]
+  |> Sub.batch                  

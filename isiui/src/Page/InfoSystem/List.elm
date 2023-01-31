@@ -7,10 +7,11 @@ import Html.Events exposing (onClick)
 
 import Dict
 
-import Html exposing (Html, a, button, div, p, span, text,h3)
-import Html.Attributes exposing (class)
+import Html exposing (Html, a, button, div, p, span, text,h3,label,input)
+import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
-import Utils.UI
+import Utils.UI as UI
+
 
 import Json.Decode as Decode
 import Data.InfoSysSummary
@@ -25,6 +26,8 @@ import Url
 -- import Utils.Error.LoadingProblem  as Problem
 import Postgrest.Queries as Q
 import Email
+import Html.Attributes exposing (placeholder)
+import Html.Events exposing (onInput)
 
 
 type alias DT = List InfoSysSummary.InfoSysSummary
@@ -52,6 +55,7 @@ type Msg
     | InfosysReceived (WebData DT)
     | AddFilter FilterName FilterValue
     | RemoveFilter FilterName
+    | SearchMsg String
     
 
 
@@ -135,7 +139,43 @@ update msg model =
             nM = { model | filters = Dict.remove name model.filters }
           in
           ( nM , fetchIS nM)
-        
+
+        SearchMsg txt ->
+          ( model
+          , search model.session txt
+          )
+
+
+
+search : Session.Model -> String -> Cmd Msg
+search session q =
+  let
+    baseUrl = Session.getApi session |> Url.toString
+    txt = "*" ++ q ++ "*"
+    qry = 
+      ( if String.isEmpty q && String.length q > 3
+        then []
+        else
+          List.map  
+            (\f -> Q.param f (Q.ilike txt) )
+            ["name","description","finality","resp_email","resp_inf_email"]
+          |> Q.or 
+          |> List.singleton 
+      )
+      |> List.append defaultListQry
+      |> Q.toQueryString 
+    url = baseUrl ++ "info_system" ++ "?" ++ qry
+
+    reqConfig = 
+      apiConfig session.session
+      |> Api.apiConfigToRequestConfig
+  in
+    if String.length q > 3
+    then
+      RemoteData.Http.getWithConfig reqConfig url
+        InfosysReceived (Decode.list Data.InfoSysSummary.decoder)
+    else 
+      Cmd.none
 
 
 
@@ -147,10 +187,25 @@ view : Model -> Html Msg
 view model =
     div 
       [class "container mb-5 mt-5 pt-5"]
-      ( -- List.append (List.map Problem.viewProblems model.problems)
-        Utils.UI.viewRemoteData (List.singleton << (viewInfoSystems model)) model.data 
-      
+      ( List.append [viewSearchBar] <|
+        UI.viewRemoteData (List.singleton << (viewInfoSystems model)) model.data      
       )
+      
+
+viewSearchBar : Html Msg
+viewSearchBar =
+  div [ class "form-group autocomplete-wrapper-big"]
+  [ label [ for "searchbar", class "visually-hidden"] [text "Cerca tra i sistemi censiti"]
+  , input 
+    [ type_ "search"
+    , class "autocomplete"
+    , placeholder "Testo da cercare nei sistemi"
+    , id "searchbar"
+    , onInput SearchMsg
+    ][]
+  , span [ class "autocomplete-icon", attribute "aria-hidden" "true"] 
+    [ UI.getIcon "it-search" [] ]
+  ]
 
 
 
@@ -169,7 +224,7 @@ viewInfoSystems {filters,session} data =
       div [class "row"]
       [ div [ class "callout note"] 
         [ div [ class "callout-title"]
-          [ Utils.UI.getIcon "it-info-circle" []
+          [ UI.getIcon "it-info-circle" []
           , text "Filtri attivi:" 
           ]
         , div [ class "row"] 
@@ -196,7 +251,7 @@ viewFilter k v =
       , button
           [ onClick <| RemoveFilter k
           ]
-          [ Utils.UI.getIcon "it-close" [] 
+          [ UI.getIcon "it-close" [] 
           , span
               [ class "visually-hidden"
               ]
@@ -215,7 +270,7 @@ viewSingleInfoSys canEdit data  =
         [ div
           [ class "etichetta"
           ]
-          [ Utils.UI.getIcon "it-pencil" []                    
+          [ UI.getIcon "it-pencil" []                    
           , a [ Route.href (Route.ISEdit data.id)]
               [ text "Modifica" ]
           , span -- per l'accessibilita' tramite screen reader
@@ -276,7 +331,7 @@ viewSingleInfoSys canEdit data  =
                       , span -- per l'accessibilita' tramite screen reader
                           [ class "visually-hidden" ]
                           [ text ("vai al dettaglio del sistema informativo " ++ data.name) ]
-                      , Utils.UI.getIcon "it-arrow-right" []                            
+                      , UI.getIcon "it-arrow-right" []                            
                       ]
                   ]
                 ])
