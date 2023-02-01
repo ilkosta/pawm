@@ -12,6 +12,7 @@ import Html exposing (..)
 import Page.InfoSystem.List as ListInfoSys
 import Page.InfoSystem.Edit as ISEdit
 import Page.InfoSystem.New  as ISNew
+import Page.InfoSystem.Details as ISDetails
 
 import Route exposing (Route)
 import Session.Session as Session
@@ -126,6 +127,7 @@ type Msg
     | ListPageMsg ListInfoSys.Msg
     | ISNewPageMsg ISNew.Msg
     | ISEditPageMsg ISEdit.Msg
+    | ISDetailsPageMsg ISDetails.Msg
     
 
 
@@ -163,12 +165,23 @@ initCurrentPage ( model, existingCmds ) =
                     in
                     ( ListPage pageModel, Cmd.map ListPageMsg pageCmds )
 
+
+                Route.ISDetails sysid ->
+                    let
+                        ( pageModel, pageCmds ) =
+                            ISDetails.init sysid model.session
+                    in
+                    ( ISDetailsPage pageModel
+                    , Cmd.map ISDetailsPageMsg pageCmds )
+
+
                 Route.ISNew ->
                     let
                         ( pageModel, pageCmds ) =
                             ISNew.init model.session
                     in
                     ( ISNewPage pageModel, Cmd.map ISNewPageMsg pageCmds )
+
 
                 Route.ISEdit sysid ->
                     let
@@ -177,7 +190,7 @@ initCurrentPage ( model, existingCmds ) =
                     in
                     ( ISEditPage pageModel, Cmd.map ISEditPageMsg pageCmd )
 
-                _ -> ( NotFoundPage, Cmd.none )
+                -- _ -> ( NotFoundPage, Cmd.none )
                     
                 
     in
@@ -244,6 +257,14 @@ view model =
           { title = "Modifica Sistema"
           , content =  [ ISEdit.view pageModel
                       |> Html.map ISEditPageMsg
+                    ]                    
+          }
+
+        ISDetailsPage pageModel ->
+          viewPage (ISDetailsPage pageModel)
+          { title = "Info Sistema"
+          , content =  [ ISDetails.view pageModel
+                      |> Html.map ISDetailsPageMsg
                     ]                    
           }
 
@@ -347,7 +368,15 @@ update msg model =
             , Cmd.map ISEditPageMsg updatedCmd
             )
 
-        
+        -- details
+        ( ISDetailsPageMsg subMsg, ISDetailsPage pageModel ) ->
+            let
+                ( updatedPageModel, updatedCmd ) =
+                    ISDetails.update subMsg pageModel
+            in
+            ( { model | page = ISDetailsPage updatedPageModel }
+            , Cmd.map ISDetailsPageMsg updatedCmd
+            )
         -----------------------------
 
         
@@ -388,8 +417,8 @@ subscriptions model =
           NotFoundPage ->
               Sub.none
           
-          ListPage m -> 
-            Sub.map ListPageMsg (ListInfoSys.subscriptions m)
+          -- ListPage m -> 
+          --   Sub.map ListPageMsg (ListInfoSys.subscriptions m)
 
           ISEditPage m ->
             Sub.map ISEditPageMsg (ISEdit.subscriptions m)

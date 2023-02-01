@@ -15,6 +15,7 @@ import Browser exposing (Document)
 import Page.InfoSystem.List as ListInfoSys
 import Page.InfoSystem.Edit as ISEdit
 import Page.InfoSystem.New as ISNew
+import Page.InfoSystem.Details as ISDetails
 
 
 import Session.Viewer exposing (Viewer)
@@ -25,6 +26,7 @@ type Page
     | ListPage ListInfoSys.Model
     | ISNewPage ISNew.Model
     | ISEditPage ISEdit.Model
+    | ISDetailsPage ISDetails.Model
 
 
 needAuth : Route -> Bool

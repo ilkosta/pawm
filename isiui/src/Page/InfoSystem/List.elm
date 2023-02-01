@@ -280,6 +280,8 @@ viewSingleInfoSys canEdit data  =
         ]
       else
         []
+    isTitle = (InfoSysSummary.idToString data.id)
+              ++ "  -  " ++ data.name 
   in
 
     div
@@ -298,10 +300,7 @@ viewSingleInfoSys canEdit data  =
                     ]
                     [ h3
                           [ class "card-title h5 no_toc" ]
-                          [ (InfoSysSummary.idToString data.id)
-                              ++ "  -  " ++ data.name 
-                            |> text
-                          ]
+                          [ text isTitle ]
                       , p
                           [ class "card-text" ]
                           [ text data.description ]
