@@ -2,7 +2,9 @@
 .branches
 .temp
 
+# per nascondere il Google OAuth Client Secret
+config.toml
+
 rubrica_personale.seeds.sql
 seed.sql
 address_book.seeds.sql
-
