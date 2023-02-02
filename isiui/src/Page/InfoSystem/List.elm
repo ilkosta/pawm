@@ -103,6 +103,7 @@ defaultListQry =
     , Q.resourceWithParams "resp:address_book!resp_email"
       [] (Q.attributes [ "fullname", "email", "legal_structure_name"])
     ]
+  , Q.order [ Q.asc "id" ]
   ]
 
 filteredList : Filters -> Q.Params
