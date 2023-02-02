@@ -5,12 +5,11 @@
 
 CREATE TABLE IF NOT EXISTS public.observers
 (
-    id bigserial,
+    id bigint primary key generated always as identity,
     created_at date NOT NULL DEFAULT now(),
     modified_at date NOT NULL DEFAULT now(),
     infosys_id bigint NOT NULL,
     email text COLLATE pg_catalog."default" NOT NULL,
-    CONSTRAINT observers_pkey PRIMARY KEY (id),
     CONSTRAINT email_infosys_u UNIQUE (email, infosys_id),
     CONSTRAINT infosys_fk FOREIGN KEY (infosys_id)
         REFERENCES public.info_system (id) MATCH SIMPLE

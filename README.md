@@ -19,25 +19,7 @@ L'autore e gli utenti abilitati:
 - possono apportare modifiche al sistema informativo (e alla lista degli utenti abilitati)
 - vengono notificati tramite il canale scelto (email, telegram,...) delle modifiche apportate (flusso realizzato da processi in ascolto non inclusi)
 
-Alla modifica di un sistema informativo corrisponde poi un flusso di comunicazioni/approvazioni che avvengono su altri sitemi informativi.
-
-### storyboard
-
-l'utente non autenticato:
-
-- puo' vedere l'elenco dei sistemi
-- puo' autenticarsi
-
-l'utente autenticato:
-
-- viene rediretto alla pagina in cui vede i suoi sistemi
-- puo' uscire dal sistema
-
-dalla pagina di elenco dei sistemi:
-
-- puo' fare ricerche
-- puo' vedere le persone coinvolte nei progetti
-
+Alla modifica di un sistema informativo corrisponde poi dei flussi di approvazione e creazione di documenti che avvengono su altri sitemi informativi.
 
 ## scelte effettuate
 
@@ -51,7 +33,7 @@ L'applicazione viene scelta come banco di prova per alcune tecnologie che si vuo
   - **kong**: per verificare le differenze in un uso base rispetto a openresty gia' utilizzato in altri progetti
 - **elm** : linguaggio funzionale puro che impedisce il verificarsi di errori di runtime e facilita la manutenzione del codice non avendo side-effects
 
-## autenticazione
+### autenticazione
 
 Nel contesto in cui dovra' esistere l'applicazione il sistema di autenticazione  e' quello ufficiale dell'ente, federato SAML e SPID.
 
@@ -60,7 +42,7 @@ Per l'esame di PAWM si sceglie di utilizzare l'autenticazione tramite OAuth basa
 Usando quindi le credenziali `unicam.it` accedendo al portale di Google Cloud Platform si e' configurato un progetto a cui concedere il rilascio di credenziali [](https://supabase.com/docs/learn/auth-deep-dive/auth-google-oauth)
 
 
-### gestione dell'api-token
+#### gestione dell'api-token
 
 Il token JWT ottenuto e' comprensivo di tutte le informazioni sull'utente autenticato e riporta le informazioni sul rilascio e la sua durata.
 
@@ -71,19 +53,19 @@ Per permettere la persistenza della sessione utente si sceglie di attivare una p
 La background api e' disponibile in tutti i browser **tranne safari**, ma il rinnovo in background e' un'ottimizzazione del meccanismo di mantenimento della sessione, quindi non preclude il funzionamento su tutte le piattaforme. Si preferisce usare comunque la `Background Api` piuttosto che i `WebWorker` (api maggiormente diffusa) perche' il codice da eseguire e' talmente piccolo che e' sconveniente istanziare un thread per eseguirlo, come farebbero invece i `WebWorker` che risulterebbero troppo pesanti.
 La chiamata alle `Background Api` rappresenta comunque una ridondanza perche' le funzionalita' di `supabase` prevedono gia' il rinnovo automatico del token alla scadenza (comportamento non di default ma attivato dalla configurazione corrente).
 
-La verifica delle credenziali in corrispondenza di ogni richiesta di una pagina dietro autenticazione e' gestita in Elm da una unica funzione (in Main.elm) che esegue in fase di valutazione dei messaggi (`update`)
+La verifica delle credenziali in corrispondenza di ogni richiesta di una pagina dietro autenticazione e' gestita in Elm da una unica funzione (in Main.elm) che esegue in fase di inizializzazione della pagina indicata dalla rotta corrente:
 
 ```elm
- Route.Edit id ->
-    case Session.viewer model.session of
-      Nothing -> 
-        (HomePage, Api.login ())
-      Just _ ->
-        ( EditPage pageModel, Cmd.map EditPageMsg pageCmd )         
+if Page.needAuth model.route && 
+    Session.viewer model.session.session == Nothing
+then (HomePage, Api.login ())
+else
+  case model.route of
+  [...]
 ```
 
 
-## autorizzazione - permessi
+### autorizzazione - permessi
 
 Si sceglie:
 
@@ -112,7 +94,8 @@ Elm adotta una strategia comune sia per la gestione dei servizi HTTP esterni che
 - Elm invia un comando
 - riceve un messaggio come risposta
 
-In Elm gli applicativi web venogno strutturati seguendo quella che e' definita l'[Architettura delle applicazioni Elm](https://guide.elm-lang.org/architecture/), dove ogni pagina e' strutturata come una macchina a stati finiti in cui gli eventi sono **comandi, abbonamenti e messaggi** gestiti come dati in transito. 
+In Elm gli applicativi web vengno strutturati seguendo quella che e' definita l'[Architettura delle applicazioni Elm](https://guide.elm-lang.org/architecture/), dove ogni pagina e' definita come una macchina a stati finiti in cui gli eventi sono **comandi, abbonamenti e messaggi** gestiti come dati in transito. 
+
 L'Arichitettura e' divisa nelle parti:
 
 * Modello: lo stato della tua applicazione
@@ -126,6 +109,7 @@ Il resto deve essere definito tramite l'architettura descritta.
 L'unione di:
 
 - architettura semplice ed essenziale
+- assenza di convenzioni e libreire auto-magiche
 - netta separazione tra cio' che e' interno al runtime ed esterno
 - linguaggio funzionale puro, con tipizzazione statica forte (dialetto di haskell) 
 
@@ -134,7 +118,7 @@ producono applicazioni:
 - esenti da errori a runtime non gestiti (sono sempre possibili errori ad esempio nell'invocazione di un'Api, ma il compilatore obbliga a gestirli)
 - strutturalmente stabili: non ci saranno cambiamenti nell'architettura o nel linguaggio che porteranno a dover riscrivere o cambiare quanto gia' fatto (l'autore non prevede cambiamenti almeno per un decennio)
 - esenti da effetti collaterali
-- quindi facili da modificare, integrare, ristrutturare
+- quindi facili da modificare, integrare, ristrutturare anche a distanza di anni
 - prive di parti auto-magiche (possibile integrando alcune librerie ma la semplicita' dell'architettura non ne fa sentire la necessita')
 - manutenibili negli anni
 - verificabili
@@ -158,7 +142,7 @@ I seed per il popolaento del database all'avvio sono stati esclusi dal repositor
 -------
 L'ambiente di sviluppo dell'applicativo e' stato creato strutturato usando [Create Elm App](https://github.com/halfzebra/create-elm-app) che struttura un ambiente predisposto per applicazioni PWA.
 
-Di seguito le indicazioni per la modifica/manutenzione del progetto.
+Di seguito le indicazioni per la modifica/manutenzione del progetto (generate in automatico dallo strumento)
 
 -------
 

@@ -55,7 +55,7 @@ GRANT ALL ON TABLE public.uo TO service_role;
 
 CREATE TABLE IF NOT EXISTS public.info_system
 (
-    id bigserial,
+    id bigint primary key generated always as identity,
     description text COLLATE pg_catalog."default",
     finality text COLLATE pg_catalog."default" NOT NULL,
     uo_id integer NOT NULL,
@@ -65,7 +65,6 @@ CREATE TABLE IF NOT EXISTS public.info_system
     resp_inf_email text COLLATE pg_catalog."default",
     creation_date date NOT NULL DEFAULT now(),
     modification_date date NOT NULL,
-    CONSTRAINT info_system_pkey PRIMARY KEY (id),
     CONSTRAINT name_uk UNIQUE (name),
     CONSTRAINT uo_fk FOREIGN KEY (uo_id)
         REFERENCES public.uo (id) MATCH SIMPLE

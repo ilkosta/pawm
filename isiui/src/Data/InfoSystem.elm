@@ -41,6 +41,7 @@ decoder =
     |> JsonPL.optional "pass_url" urlDecoder emptyUrl
 
 
+
 encoder : InfoSystem -> Encode.Value
 encoder i =
   let
