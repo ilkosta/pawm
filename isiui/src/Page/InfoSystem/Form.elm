@@ -211,6 +211,13 @@ form2infoSys (Trimmed f)  =
   let
     email maybePerson = 
       Maybe.map (\p -> p.email) maybePerson
+      |> Maybe.andThen 
+          ( \e ->
+              if e == Utils.Email.emptyEmail 
+              then Nothing
+              else Just e
+          )
+
   in
   { id = Maybe.map ISS.idFromInt f.id
   , name = f.name

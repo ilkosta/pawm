@@ -341,6 +341,9 @@ submit : Session.Model -> Form.TrimmedForm -> Cmd Msg
 submit session f =
   let
     infosys = Form.form2infoSys f
+
+    _ = Debug.log "resp_inf" infosys.respInf
+
     id = Maybe.map InfoSysSummary.idToInt infosys.id 
           |> Maybe.withDefault 0
     url = 
