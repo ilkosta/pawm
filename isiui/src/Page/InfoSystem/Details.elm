@@ -163,12 +163,12 @@ viewIS {session} data =
         viewPerson lbl person = 
           
             [ div [ class "col-sm-6"] 
-              [ blockquote [ class "blockquote blockquote-card text-start"]
+              [ blockquote [ class "blockquote blockquote-card"]
                 [ p [] [ strong [] [ text lbl]]
                 , p [ ] 
-                  [ text person.fullname 
-                  , a [ href <| "mailto:" ++ (Email.toString person.email) ] 
-                    [ UI.getIcon "it-email" [] ]
+                  [ a [ href <| "mailto:" ++ (Email.toString person.email) ] 
+                    [ UI.getIcon "it-mail" [] ]
+                  , text person.fullname 
                   ]
                 , span [ ] [ text person.uo ]
                   , footer [ class "blockquote-footer" ]
@@ -184,12 +184,12 @@ viewIS {session} data =
       [ div [ class "card-wrapper card-space" ]
         [ div [class "card card-bg card-big"]
           ( editHeader ++ 
-            [ div [ class "card-body"]
+            [ div [ class "card-body   text-start"]
               [ div [ class "row" ] 
                 [ div [class "col-1"] 
-                  [ div [ class "top-icon h5 text-start"] [ UI.getIcon "it-card" [] ] ]
+                  [ div [ class "top-icon"] [ UI.getIcon "it-card" [] ] ]
                 , div [class "col-11"] 
-                  [ h3 [ class "card-title h"] [ text isTitle ] 
+                  [ h3 [ class "card-title h5 "] [ text isTitle ] 
                   , p [ ] [ text data.description ]
                   ]
                 ]
