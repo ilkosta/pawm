@@ -1,0 +1,219 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progetto PAWM - matricola 101101</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__html">
+<h1 id="organizzazione-dellapplicativo">organizzazione dell’applicativo</h1>
+<h2 id="scopo">scopo</h2>
+<p>L’applicazione ha lo scopo di reimplementare in PWA una vecchia applicazione intranet web-form .net con librerie obsolete, non piu’ disponibili e con licenze modificate, attualmente pubblicata su un host da dismettere perche’ fuori supporto.</p>
+<h2 id="funzionamento-dellapplicativo">funzionamento dell’applicativo</h2>
+<p>L’applicativo attualmente viene usato per censire i sistemi informativi (era nato con altro scopo nel 2011) e fa parte del workflow delle certificazioni ISO27000 di un ente pubblico.</p>
+<ul>
+<li>
+<p>Tutti gli utenti (anche anonimi) devono poter vedere le informazioni disponibili.</p>
+</li>
+<li>
+<p>Solo gli utenti accreditati possono censire dei nuovi sistemi informativi.</p>
+</li>
+<li>
+<p>Una volta creato il sistema puo’ esssere modificato solo dagli utenti abilitati.</p>
+</li>
+<li>
+<p>L’autore ed il il service owner sono automaticamente abilitati.</p>
+</li>
+<li>
+<p>L’autore puo’ abiliare espressamente altri utenti accreditati.</p>
+</li>
+</ul>
+<p>L’autore e gli utenti abilitati:</p>
+<ul>
+<li>
+<p>possono apportare modifiche al sistema informativo (e alla lista degli utenti abilitati)</p>
+</li>
+<li>
+<p>vengono notificati tramite il canale scelto (email, telegram,…) delle modifiche apportate (flusso realizzato da processi in ascolto non inclusi)</p>
+</li>
+</ul>
+<p>Alla modifica di un sistema informativo corrisponde poi dei flussi di approvazione e creazione di documenti che avvengono su altri sitemi informativi.</p>
+<h2 id="scelte-effettuate">scelte effettuate</h2>
+<h3 id="stack-applicativo">stack applicativo</h3>
+<p>L’applicazione viene scelta come banco di prova per alcune tecnologie che si vuole approfondire:</p>
+<ul>
+<li>
+<p><strong>supabase</strong> con installazione on-premise, per verificare l’usabilita’ e la distanza con il servizio cloud ufficiale</p>
+</li>
+<li>
+<p><strong>postgrest</strong>: forza lo sviluppo tramite API</p>
+</li>
+<li>
+<p><strong>postgrest + postgres</strong>: come modo per forzare un profilo di sicurezza esteso a tutti i livelli</p>
+</li>
+<li>
+<p><strong>elm</strong> : linguaggio funzionale puro che impedisce il verificarsi di errori di runtime e facilita la manutenzione del codice non avendo side-effects</p>
+</li>
+</ul>
+<h3 id="autenticazione">autenticazione</h3>
+<p>Nel contesto in cui dovra’ esistere l’applicazione il sistema di autenticazione e’ quello ufficiale dell’ente, federato SAML e SPID.</p>
+<p>Per l’esame di PAWM si sceglie di utilizzare l’autenticazione tramite OAuth basata sul Google IDS, in quanto l’ateneo e’ registrato come organizzazione <code>unicam.it</code>, quindi tutti gli utenti hanno un account Google.</p>
+<p>Usando quindi le credenziali <code>unicam.it</code> accedendo al portale di Google Cloud Platform si e’ configurato un progetto a cui concedere il rilascio di credenziali <a href="https://supabase.com/docs/learn/auth-deep-dive/auth-google-oauth"></a></p>
+<h4 id="gestione-dellapi-token">gestione dell’api-token</h4>
+<p>Il token JWT ottenuto e’ comprensivo di tutte le informazioni sull’utente autenticato e riporta le informazioni sul rilascio e la sua durata.</p>
+<p>Per permettere la persistenza della sessione utente si sceglie di attivare una procedura di auto-rinnovo lanciato in prossimita’ della scadenza, usando due strategie:</p>
+<ul>
+<li>
+<p>configuando <code>supabase</code> in modo che proceda autonomamente al rinnovo del token prima della scadenza</p>
+</li>
+<li>
+<p>fallback: in background (tramite le <code>Background_Tasks_API</code>: <a href="https://developer.mozilla.org/en-US/docs/Web/API/Background_Tasks_API">https://developer.mozilla.org/en-US/docs/Web/API/Background_Tasks_API</a>), per garantire la persistenza anche se l’applicativo e’ in pausa</p>
+</li>
+</ul>
+<p>La background api e’ disponibile in tutti i browser <strong>tranne safari</strong>, ma il rinnovo in background e’ un’ottimizzazione del meccanismo di mantenimento della sessione, quindi non preclude il funzionamento su tutte le piattaforme. Si preferisce usare comunque la <code>Background Api</code> piuttosto che i <code>WebWorker</code> (api maggiormente diffusa) perche’ il codice da eseguire e’ talmente piccolo che e’ sconveniente istanziare un thread per eseguirlo, come farebbero invece i <code>WebWorker</code> che risulterebbero troppo pesanti.</p>
+<p>La chiamata alle <code>Background Api</code> rappresenta comunque una ridondanza perche’ le funzionalita’ di <code>supabase</code> prevedono gia’ il rinnovo automatico del token alla scadenza (comportamento non di default ma attivato dalla configurazione corrente).</p>
+<p>La verifica delle credenziali in corrispondenza di ogni richiesta di una pagina dietro autenticazione e’ gestita in Elm da una unica funzione (in Main.elm) che esegue in fase di inizializzazione della pagina indicata dalla rotta corrente:</p>
+<pre class=" language-elm"><code class="prism  language-elm">
+if Page.needAuth model.route &amp;&amp;
+
+Session.viewer model.session.session == Nothing
+
+then (HomePage, Api.login ())
+
+else
+
+case model.route of
+
+[...]
+
+</code></pre>
+<h3 id="autorizzazione---permessi">autorizzazione - permessi</h3>
+<p>Si sceglie:</p>
+<ul>
+<li>
+<p>di abilitare l’applicazione ai soli utenti interni all’organizzazione <code>unicam.it</code></p>
+</li>
+<li>
+<p>di permettere l’accesso al solo ambito <code>userinfo.email</code>, mentre nell’applicazione reale verrebbero estratte dal token di autenticazione piu’ informazioni (es. codice fiscale).</p>
+</li>
+</ul>
+<p>Ogni strato applicativo deve avere la garanzia che le informazioni vengono fornite e modificate in aderenza alle regole di cui sopra.</p>
+<p>Si sceglie quindi di posizionare la verifica dei permessi/autorizzazioni nel livello piu’ basso possibile dell’applicativo, sul database, in modo che sia impossibile un utilizzo improprio dei dati.</p>
+<p>Questa scelta ha come conseguenze:</p>
+<ul>
+<li>
+<p>maggiore velocita’ di estrazione/elaborazione dei dati da parte del database:</p>
+</li>
+<li>
+<p>minor numero di dati estraibili dal db, in accordo ai permessi concessi</p>
+</li>
+<li>
+<p>il motore di ottimizzazione di Postgres tiene conto della visibilita’ dei dati e del loro peso per valutare come eseguire le query complesse</p>
+</li>
+<li>
+<p>piu’ facile intercettare errori durante lo sviluppo o modifica dell’applicativo</p>
+</li>
+<li>
+<p>unico punto in cui le regole vengono applicate e possono essere modificate</p>
+</li>
+</ul>
+<h3 id="motivo-della-scelta-di-elm">motivo della scelta di Elm</h3>
+<p>Elm e’ un linguaggio funzionale puro che usa <strong>comandi, abbonamenti e messaggi</strong> per gestire correttamente gli effetti collaterali originati dall’interazione con il mondo esterno, portando ad una netta distinzione tra runtime Elm (dove gli effetti collaterali sono impossibili) ed il mondo esterno con cui scambia messaggi.</p>
+<p><img src="https://elmprogramming.com/images/chapter-5/5.5-side-effects/elm-runtime.svg" alt="elm side effect mng"></p>
+<p>Elm adotta una strategia comune sia per la gestione dei servizi HTTP esterni che per la comunicazione con il runtime Js, fornendo un’interfaccia unica per tutto quello che e’ esterno al runtime di Elm:</p>
+<ul>
+<li>
+<p>Elm invia un comando</p>
+</li>
+<li>
+<p>riceve un messaggio come risposta</p>
+</li>
+</ul>
+<p>In Elm gli applicativi web vengno strutturati seguendo quella che e’ definita l’<a href="https://guide.elm-lang.org/architecture/">Architettura delle applicazioni Elm</a>, dove ogni pagina e’ definita come una macchina a stati finiti in cui gli eventi sono <strong>comandi, abbonamenti e messaggi</strong> gestiti come dati in transito.</p>
+<p>L’Arichitettura e’ divisa nelle parti:</p>
+<ul>
+<li>
+<p>Modello: lo stato della tua applicazione</p>
+</li>
+<li>
+<p>Visualizzazione: un modo per trasformare il tuo stato in HTML</p>
+</li>
+<li>
+<p>Aggiornamento: un modo per aggiornare il tuo stato in base ai messaggi</p>
+</li>
+</ul>
+<p>Dove il runtime Elm si fa carico “solo” di trasmettere i messaggi (tra codice Elm e resto del mondo) e invocare le funzioni di visualizzazione ad ogni modifica del modello.</p>
+<p>Il resto deve essere definito tramite l’architettura descritta.</p>
+<p>L’unione di:</p>
+<ul>
+<li>
+<p>architettura semplice ed essenziale</p>
+</li>
+<li>
+<p>assenza di convenzioni e libreire auto-magiche</p>
+</li>
+<li>
+<p>netta separazione tra cio’ che e’ interno al runtime ed esterno</p>
+</li>
+<li>
+<p>linguaggio funzionale puro, con tipizzazione statica forte (dialetto di haskell)</p>
+</li>
+</ul>
+<p>producono applicazioni:</p>
+<ul>
+<li>
+<p>esenti da errori a runtime non gestiti (sono sempre possibili errori ad esempio nell’invocazione di un’Api, ma il compilatore obbliga a gestirli)</p>
+</li>
+<li>
+<p>strutturalmente stabili: non ci saranno cambiamenti nell’architettura o nel linguaggio che porteranno a dover riscrivere o cambiare quanto gia’ fatto (l’autore non prevede cambiamenti almeno per un decennio)</p>
+</li>
+<li>
+<p>esenti da effetti collaterali</p>
+</li>
+<li>
+<p>quindi facili da modificare, integrare, ristrutturare anche a distanza di anni</p>
+</li>
+<li>
+<p>prive di parti auto-magiche (possibile integrando alcune librerie ma la semplicita’ dell’architettura non ne fa sentire la necessita’)</p>
+</li>
+<li>
+<p>manutenibili negli anni</p>
+</li>
+<li>
+<p>verificabili</p>
+</li>
+<li>
+<p>facilmente debuggabili usanto la time-machine integrata (registrazione degli eventi/stati nel tempo), permettendo di comprendere il funzionamento interno di un’applicativo semplicemente usandolo</p>
+</li>
+<li>
+<p>particolarmente piccole e veloci</p>
+</li>
+</ul>
+<h2 id="approcio-di-sviluppo-con-supabase">approcio di sviluppo con supabase</h2>
+<p>Supabase fornisce un client che permette</p>
+<ul>
+<li>
+<p>l’orchestrazione di tutti i servizi di cui si compone</p>
+</li>
+<li>
+<p>startup dell’ambiente con caricamento di dati e configurazione da script versionati</p>
+</li>
+<li>
+<p>possibilita’ di adottare dei workflow di sviluppo anche complessi (come git-workflow)</p>
+</li>
+<li>
+<p>completa integrazione con lo strumento git</p>
+</li>
+</ul>
+<p>L’applicazione sviluppata poi potra’ essere pubblicata direttamente nel loro cloud (SaaS) o on-premis, permettendo in qualsiasi momento (es. esigenze di disaster recovery) di spostare l’applicativo on-premis in cloud.</p>
+<p>I seed per il popolaento del database all’avvio sono stati esclusi dal repository per evitare problemi di privacy.</p>
+<hr>
+<p>L’ambiente di sviluppo dell’applicativo e’ stato creato strutturato usando <a href="https://github.com/halfzebra/create-elm-app">Create Elm App</a> che struttura un ambiente predisposto per applicazioni PWA.</p>
+</div>
+</body>
+
+</html>

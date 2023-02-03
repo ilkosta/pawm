@@ -28,6 +28,7 @@ import Postgrest.Queries as Q
 import Email
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onInput)
+import Session.Viewer as Viewer
 
 
 type alias DT = List InfoSysSummary.InfoSysSummary
@@ -80,7 +81,7 @@ fetchIS {session, filters} =
   let
     baseUrl = Session.getApi session |> Url.toString
     qry = 
-      filteredList filters 
+      filteredList session.session filters 
       |> Q.toQueryString 
     url = baseUrl ++ "info_system" ++ "?" ++ qry |> Debug.log "qry:"
 
@@ -93,21 +94,41 @@ fetchIS {session, filters} =
       InfosysReceived (Decode.list Data.InfoSysSummary.decoder)
 
 
-defaultListQry : Q.Params
-defaultListQry =
+defaultListQry : Session.Session -> Q.Params
+defaultListQry session =
+  let
+    meParams =
+      case Session.viewer session of
+        Just viewer -> 
+          Viewer.email viewer
+          |> Email.toString
+          |> Q.string
+          |> Q.eq
+          |> Q.param "email"
+          |> List.singleton
+        Nothing -> []
+  in
   [ Q.select 
     [ Q.attribute "id"
     , Q.attribute "name"
     , Q.attribute "description"
     , Q.attribute "finality"
     , Q.resourceWithParams "resp:address_book!resp_email"
-      [] (Q.attributes [ "fullname", "email", "legal_structure_name"])
+      [] (Q.attributes [ "fullname", "email"])
+    , Q.resourceWithParams "uo"
+      [] (Q.attributes [ "description"])
+    , Q.resourceWithParams "authorizations"
+      meParams
+      (Q.attributes [ "email"])
+    , Q.resourceWithParams "observers"
+      meParams
+      (Q.attributes [ "email"])
     ]
-  , Q.order [ Q.asc "id" ]
+  , Q.order [ Q.asc "id" ]  
   ]
 
-filteredList : Filters -> Q.Params
-filteredList filters =
+filteredList : Session.Session -> Filters -> Q.Params
+filteredList session filters =
   let
     filter2param _ v = Q.param v.field (Q.eq (Q.string v.value))
   in
@@ -115,7 +136,7 @@ filteredList filters =
   |> Dict.toList
   |> List.map Tuple.second
   |> List.singleton 
-  |> List.append [defaultListQry]
+  |> List.append [defaultListQry session]
   |> Q.concatParams 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -163,7 +184,7 @@ search session q =
           |> Q.or 
           |> List.singleton 
       )
-      |> List.append defaultListQry
+      |> List.append (defaultListQry session.session)
       |> Q.toQueryString 
     url = baseUrl ++ "info_system" ++ "?" ++ qry
 
@@ -266,8 +287,11 @@ viewFilter k v =
 viewSingleInfoSys : Bool -> InfoSysSummary.InfoSysSummary ->  Html Msg 
 viewSingleInfoSys canEdit data  =
   let
+    canEdit_ = canEdit && data.authorized
+    -- TODO: ottenere gia' dal db l'indicazione 
+    --        se l'editazione e' abilitata per l'utente corrente
     editHeader = 
-      if canEdit then
+      if canEdit_ then
         [ div
           [ class "etichetta"
           ]
@@ -319,7 +343,7 @@ viewSingleInfoSys canEdit data  =
                       ]
                       [ text  data.respName ]
                   , p [ class "card-signature"]
-                      [ text data.respStructure]
+                      [ text data.uo]
                     
                   , a
                       [ Route.href (Route.ISDetails data.id)

@@ -15,6 +15,7 @@
 - [-] token refresh usando le Background Api (vedi https://github.com/supabase/gotrue-js/blob/5c43ca5ffda8b9cccc493a47a4d3a6194a057ad2/src/GoTrueClient.ts#L838 - https://stackoverflow.com/questions/72610091/supabase-rest-how-to-refresh-token)
 - [x] implementare la composizione delle query verso postgrest
 - [-] viste di lista
+  - [-] filtri rapidi per struttura o utente
   - [ ] paginazione
   - [ ] ricerca in linea
   - [ ] possiblita' di aggiungersi/togliersi agli osservatori
@@ -25,3 +26,6 @@
   - [ ] modifica dell'elenco degli abilitati
   - [ ] vista dell'elenco degli osservatori
 - [x] vista di inserimento
+- [ ] verifica dell'esistenza della connessione
+- [ ] utilizzo di risorse precaricate
+- [ ] ripulire per la build completa

@@ -45,17 +45,27 @@ type alias InfoSysSummary =
   , description : String
   , respEmail : Email.Email
   , respName : String
-  , respStructure : String
+  , uo : String
+  , authorized : Bool
+  , observed : Bool
   , finality : String  
   }
 
 decoder = 
+  let
+    exists : List a -> Bool
+    exists l =
+      not <| List.isEmpty l
+  in
   Decode.succeed InfoSysSummary
     |> JsonPL.required "id" idDecoder
     |> JsonPL.required "name" string
     |> JsonPL.required "description" string
     |> JsonPL.requiredAt ["resp", "email"] emailDecoder
     |> JsonPL.requiredAt ["resp", "fullname"] string
-    |> JsonPL.requiredAt ["resp", "legal_structure_name"] string
+    |> JsonPL.requiredAt ["uo", "description"] string
+    |> JsonPL.required "authorizations" (Decode.map exists <| Decode.list ( Decode.field "email" string) )
+    |> JsonPL.required "observers" (Decode.map exists <| Decode.list ( Decode.field "email" string) )
     |> JsonPL.optional "finality" string "---"
+    
 

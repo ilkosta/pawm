@@ -8,13 +8,13 @@ L'applicazione ha lo scopo di reimplementare in PWA una vecchia applicazione int
 
 ## funzionamento dell'applicativo
 
-L'applicativo attualmente viene usato per censire i sistemi informativi (era nato con altro scopo nel 2011) e fa parte del workflow delle certificazioni ISO27000 dell'ente.
+L'applicativo attualmente viene usato per censire i sistemi informativi (era nato con altro scopo nel 2011) e fa parte del workflow delle certificazioni ISO27000 di un ente pubblico.
 
-Tutti gli utenti (anche anonimi) devono poter vedere le informazioni disponibili.
-Solo gli utenti accreditati possono censire dei nuovi sistemi informativi.
-Una volta creato il sistema puo' esssere modificato solo dagli utenti abilitati.
-L'autore ed il il service owner sono automaticamente abilitati.
-L'autore puo' abiliare espressamente altri utenti accreditati.
+* Tutti gli utenti (anche anonimi) devono poter vedere le informazioni disponibili.
+* Solo gli utenti accreditati possono censire dei nuovi sistemi informativi.
+* Una volta creato il sistema puo' esssere modificato solo dagli utenti abilitati.
+* L'autore ed il il service owner sono automaticamente abilitati.
+* L'autore puo' abiliare espressamente altri utenti accreditati.
 
 L'autore e gli utenti abilitati:
 
@@ -32,14 +32,13 @@ L'applicazione viene scelta come banco di prova per alcune tecnologie che si vuo
 - **supabase** con installazione on-premise, per verificare l'usabilita' e la distanza con il servizio cloud ufficiale
   - **postgrest**: forza lo sviluppo tramite API
   - **postgrest + postgres**: come modo per forzare un profilo di sicurezza esteso a tutti i livelli  
-  - **kong**: per verificare le differenze in un uso base rispetto a openresty gia' utilizzato in altri progetti
 - **elm** : linguaggio funzionale puro che impedisce il verificarsi di errori di runtime e facilita la manutenzione del codice non avendo side-effects
 
 ### autenticazione
 
 Nel contesto in cui dovra' esistere l'applicazione il sistema di autenticazione  e' quello ufficiale dell'ente, federato SAML e SPID.
 
-Per l'esame di PAWM si sceglie di utilizzare l'autenticazione tramite OAuth basata sul Google IDS, in quanto l'ateneo e' registrato come organizzazione `unicam.it`, quindi tutti gli utenti hanno un account Google [^6][^7].
+Per l'esame di PAWM si sceglie di utilizzare l'autenticazione tramite OAuth basata sul Google IDS, in quanto l'ateneo e' registrato come organizzazione `unicam.it`, quindi tutti gli utenti hanno un account Google. 
 
 Usando quindi le credenziali `unicam.it` accedendo al portale di Google Cloud Platform si e' configurato un progetto a cui concedere il rilascio di credenziali [](https://supabase.com/docs/learn/auth-deep-dive/auth-google-oauth)
 
@@ -89,7 +88,7 @@ Questa scelta ha come conseguenze:
 
 Elm e' un linguaggio funzionale puro che usa **comandi, abbonamenti e messaggi** per gestire correttamente gli effetti collaterali originati dall'interazione con il mondo esterno, portando ad una netta distinzione tra runtime Elm (dove gli effetti collaterali sono impossibili) ed il mondo esterno con cui scambia messaggi.
 
-[elm side effect mng](https://elmprogramming.com/images/chapter-5/5.5-side-effects/elm-runtime.svg)
+![elm side effect mng](https://elmprogramming.com/images/chapter-5/5.5-side-effects/elm-runtime.svg)
 
 Elm adotta una strategia comune sia per la gestione dei servizi HTTP esterni che per la comunicazione con il runtime Js, fornendo un'interfaccia unica per tutto quello che e' esterno al runtime di Elm:
 
