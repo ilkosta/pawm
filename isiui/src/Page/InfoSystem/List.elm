@@ -29,6 +29,11 @@ import Email
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onInput)
 import Session.Viewer as Viewer
+import Http
+import Data.InfoSysSummary as InfoSysSummary exposing (InfoSysId)
+import Utils.Email
+import Data.Bookmark as Bookmark
+import RemoteData exposing (RemoteData(..))
 
 
 type alias DT = List InfoSysSummary.InfoSysSummary
@@ -47,16 +52,19 @@ type alias Model =
   , session : Session.Model
   -- , problems : List Problem.Problem
   , filters : Filters
+  , error : Maybe String
   }
 
 
 
 type Msg
-    = FetchInfosystems
-    | InfosysReceived (WebData DT)
-    | AddFilter FilterName FilterValue
-    | RemoveFilter FilterName
-    | SearchMsg String
+  = FetchInfosystems
+  | InfosysReceived (WebData DT)
+  | AddFilter FilterName FilterValue
+  | RemoveFilter FilterName
+  | SearchMsg String
+  | BookmarkMsg InfoSysSummary.InfoSysId
+  | BookmarkedMsg (Result Http.Error Bookmark.Bookmark)
     
 
 
@@ -68,6 +76,7 @@ init session =
       { data = RemoteData.Loading
       , session = session
       , filters = Dict.empty
+      , error = Nothing
       }
   in
   ( model , fetchIS model)
@@ -167,6 +176,30 @@ update msg model =
           , search model.session txt
           )
 
+        BookmarkMsg id ->
+          ( model, sendBookmark model id )
+
+        BookmarkedMsg (Result.Ok bmk) -> 
+          case model.data of
+            Success d_ ->
+              let
+                d = 
+                  List.map 
+                    (\is -> 
+                      if (InfoSysSummary.idToInt is.id) == (InfoSysSummary.idToInt bmk.id) 
+                      then { is | observed = not is.observed}
+                      else is
+                    )
+                  d_
+              in
+              ( {model | data = Success d}, Cmd.none)
+            _ -> ( model, Cmd.none)
+          
+
+        BookmarkedMsg (Result.Err err) -> 
+          ( { model | error = Just <| UI.buildErrorMessage err }
+          , Cmd.none
+          )
 
 
 search : Session.Model -> String -> Cmd Msg
@@ -200,6 +233,96 @@ search session q =
       Cmd.none
 
 
+sendBookmark : Model -> InfoSysSummary.InfoSysId -> Cmd Msg
+sendBookmark model id = 
+  case model.data of
+    Success d_ ->
+      let
+        bookmarked = 
+          List.filter 
+            (\is -> InfoSysSummary.idToInt is.id == InfoSysSummary.idToInt id) 
+            d_
+          |> List.head
+          |> Maybe.map .observed
+          |> Maybe.withDefault False
+      in
+        if bookmarked 
+        then removeBookmark model.session id
+        else addBookmark model.session id
+
+    _ -> Cmd.none
+
+addBookmark : Session.Model -> InfoSysSummary.InfoSysId -> Cmd Msg
+addBookmark session id = 
+  let
+    baseUrl = Session.getApi session |> Url.toString
+    headers = 
+      Api.apiConfig session.session
+      |> Api.configWithRepresentation
+      |> Api.apiSingleResult
+      |> Dict.toList
+      |> List.map (\(k,v) -> Http.header k v)
+    
+    url = baseUrl ++ "observers"
+
+    maybeViewer = Session.viewer session.session
+
+    data = 
+      Maybe.map Viewer.email maybeViewer
+      |> Maybe.withDefault Utils.Email.emptyEmail
+      |> Bookmark.Bookmark id
+
+    body = Bookmark.econder data
+  in
+  if data.email == Utils.Email.emptyEmail
+  then Cmd.none
+  else 
+    Http.request 
+      { method = "POST"
+      , headers = headers
+      , url = url
+      , body = Http.jsonBody body
+      , expect = Api.expectJson BookmarkedMsg Bookmark.decoder
+      , timeout = Nothing
+      , tracker = Nothing
+      }
+
+removeBookmark : Session.Model -> InfoSysSummary.InfoSysId -> Cmd Msg
+removeBookmark session id = 
+  let
+    baseUrl = Session.getApi session |> Url.toString
+    headers = 
+      Api.apiConfig session.session
+      |> Api.configWithRepresentation
+      |> Api.apiSingleResult
+      |> Dict.toList
+      |> List.map (\(k,v) -> Http.header k v)
+    
+    maybeViewer = Session.viewer session.session
+
+    emailStr = 
+      Maybe.map Viewer.email maybeViewer
+      |> Maybe.withDefault Utils.Email.emptyEmail
+      |> Email.toString
+
+    qry = 
+      [ Q.param "infosys_id" <| Q.eq <| Q.int <| InfoSysSummary.idToInt id
+      , Q.param "email" <| Q.eq <| Q.string emailStr
+      ] |> Q.toQueryString
+
+    url = baseUrl ++ "observers?" ++ qry
+
+    -- body = bookmarkEconder data
+  in
+  Http.request 
+    { method = "DELETE"
+    , headers = headers
+    , url = url
+    , body = Http.emptyBody
+    , expect = Api.expectJson BookmarkedMsg Bookmark.decoder
+    , timeout = Nothing
+    , tracker = Nothing
+    }
 
 
 -- VIEWS
@@ -307,6 +430,16 @@ viewSingleInfoSys canEdit data  =
         []
     isTitle = (InfoSysSummary.idToString data.id)
               ++ "  -  " ++ data.name 
+
+    bookmarkIcon = 
+      if data.observed
+      then "it-star-full"
+      else "it-star-outline"
+
+    bookmark = 
+      if canEdit 
+      then span [ onClick <| BookmarkMsg data.id ] [ UI.getIcon bookmarkIcon [] ]
+      else span [][]
   in
 
     div
@@ -320,7 +453,8 @@ viewSingleInfoSys canEdit data  =
                 [ class "card card-bg card-big border-bottom-card"
                 ]
                 (editHeader ++ 
-                [ div
+                [ bookmark
+                , div
                     [ class "card-body"
                     ]
                     [ h3

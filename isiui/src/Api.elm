@@ -7,6 +7,7 @@ port module Api exposing
     , viewerDecoder
     , apiConfigToRequestConfig
     , apiSingleResult
+    , expectJson
     -- , uoRemoteSearchAttrs
     -- , peopleRemoteSearchAttrs
     -- , loadPeople
@@ -141,6 +142,42 @@ apiSingleResult conf =
 configWithRepresentation : Dict.Dict String String -> Dict.Dict String String
 configWithRepresentation conf = 
   Dict.insert "Prefer" "return=representation" conf
+
+
+{-| fancier error handling and getting response heaers
+
+This function is great for fancier error handling and getting response headers. For example, maybe when your sever gives a 404 status code (not found) it also provides a helpful JSON message in the response body. This function lets you add logic to the BadStatus_ branch so you can parse that JSON and give users a more helpful message! Or make your own custom error type for your particular application!
+
+This is taken directly from the [Http.expectStringResponse docs](https://elm.dmy.fr/packages/elm/http/latest/Http#expectStringResponse)
+and customized for the error messages produced by postgrest
+(thanks to Simon Lydell for the hints https://elmlang.slack.com/archives/C192T0Q1E/p1675508150146499?thread_ts=1675507466.471519&cid=C192T0Q1E)
+-}
+expectJson : 
+  (Result Http.Error a -> msg) 
+  -> Decode.Decoder a -> Http.Expect msg
+expectJson toMsg decoder =
+  Http.expectStringResponse toMsg <|
+    \response ->
+      case response of
+        Http.BadUrl_ url ->
+          Err (Http.BadUrl url)
+
+        Http.Timeout_ ->
+          Err Http.Timeout
+
+        Http.NetworkError_ ->
+          Err Http.NetworkError
+
+        Http.BadStatus_ metadata body ->
+          Err (Http.BadStatus metadata.statusCode)
+
+        Http.GoodStatus_ metadata body ->
+          case Decode.decodeString decoder body of
+            Ok value ->
+              Ok value
+
+            Err err ->
+              Err (Http.BadBody (Decode.errorToString err))
 
 
 ----- LocalStorage

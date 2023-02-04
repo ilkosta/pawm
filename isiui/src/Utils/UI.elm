@@ -1,5 +1,6 @@
 module Utils.UI exposing 
   ( getIcon, getSprite, viewRemoteData
+  , buildErrorMessage
   )
 
 import Html exposing (Html, a, button, div, li, nav, p, span, text, ul,h3)

@@ -25,14 +25,21 @@ Alla modifica di un sistema informativo corrisponde poi dei flussi di approvazio
 
 ## scelte effettuate
 
+### riconoscibilita' e usabilita'
+
+Per quanto riguarda gli aspetti di riconoscibilita' e usabilita' 
+
+- e' stato adottato il framework [bootstrap-italia](https://italia.github.io/bootstrap-italia/)
+- si e' cercato di seguire il piu' possibile i pattern indicati nell' [UI Kit di Designers Italia](https://designers.italia.it/kit/ui-kit/) che indica come realizzare delle UI coerenti con le linee guida che l'Agid ed il Dipartimento per la trasformazione digitale richiedono per le amministrazioni pubbliche.
+
 ### stack applicativo
 
 L'applicazione viene scelta come banco di prova per alcune tecnologie che si vuole approfondire:
 
-- **supabase** con installazione on-premise, per verificare l'usabilita' e la distanza con il servizio cloud ufficiale
-  - **postgrest**: forza lo sviluppo tramite API
+- **[supabase](https://supabase.com/)** una alternativa OpenSource a Firebase, con installazione on-premise, per verificare l'usabilita' e la distanza con il servizio cloud ufficiale
+  - **[postgrest](https://postgrest.org/en/stable/)**: forza lo sviluppo tramite API
   - **postgrest + postgres**: come modo per forzare un profilo di sicurezza esteso a tutti i livelli  
-- **elm** : linguaggio funzionale puro che impedisce il verificarsi di errori di runtime e facilita la manutenzione del codice non avendo side-effects
+- **[elm](https://elm-lang.org/)** : linguaggio funzionale puro che impedisce il verificarsi di errori di runtime e facilita la manutenzione del codice non avendo side-effects
 
 ### autenticazione
 
