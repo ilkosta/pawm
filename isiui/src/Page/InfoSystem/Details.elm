@@ -6,7 +6,8 @@ import Data.InfoSystem as InfoSystem
 import Data.Person exposing (Person)
 import Html.Events exposing (onClick)
 
-import Dict
+import Svg.Attributes as SvgAttr
+import Http
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -17,7 +18,7 @@ import Utils.UI as UI
 import Json.Decode as Decode exposing (string)
 import Json.Decode.Pipeline as JsonPL
 
-import Data.InfoSysSummary
+import Data.Bookmark as Bookmark
 import Data.Person as Person
 import RemoteData exposing (WebData)
 import RemoteData.Http
@@ -35,6 +36,8 @@ import Email
 import Html.Attributes exposing (placeholder)
 import Html.Events exposing (onInput)
 
+import Session.Viewer as Viewer
+
 import List.Extra
 
 type alias DT =  
@@ -46,10 +49,17 @@ type alias DT =
   , resp : Person
   , respInf : Maybe Person
   , passPrj : Url.Url
+  , authorized : Bool
+  , observed : Bool
   }
 
 dtDecoder : Decode.Decoder DT
 dtDecoder = 
+  let
+    exists : List a -> Bool
+    exists l =
+      not <| List.isEmpty l
+  in
   Decode.succeed DT
     |> JsonPL.required "id" InfoSysSummary.idDecoder
     |> JsonPL.required "name" string
@@ -59,17 +69,21 @@ dtDecoder =
     |> JsonPL.required "resp" Person.decoder
     |> JsonPL.required "resp_inf" (Decode.nullable Person.decoder)
     |> JsonPL.optional "pass_url" urlDecoder emptyUrl
-
+    |> JsonPL.required "authorizations" (Decode.map exists <| Decode.list ( Decode.field "email" string) )
+    |> JsonPL.required "observers" (Decode.map exists <| Decode.list ( Decode.field "email" string) )
+    
 
 
 type alias Model =
   { data : WebData DT
   , session : Session.Model
+  , error : Maybe String
   }
 
 type Msg
     = ISReceived (WebData DT)
-    -- | FetchISMsg
+    | BookmarkMsg InfoSysSummary.InfoSysId
+    | BookmarkedMsg (Result Http.Error Bookmark.Bookmark)
 
 init : InfoSysId -> Session.Model -> ( Model, Cmd Msg )
 init isId session =
@@ -77,6 +91,7 @@ init isId session =
     model = 
       { data = RemoteData.Loading
       , session = session
+      , error = Nothing
       }
   in
   ( model , fetchIS isId model)
@@ -88,7 +103,7 @@ fetchIS isId {session} =
     baseUrl = Session.getApi session |> Url.toString
     qry = 
       (Q.param "id" <| Q.eq <| Q.int <| InfoSysSummary.idToInt isId)
-      :: defaultQry
+      :: (defaultQry session.session)
       |> Q.toQueryString 
 
     url = baseUrl ++ "info_system" ++ "?" ++ qry
@@ -102,8 +117,20 @@ fetchIS isId {session} =
       ISReceived dtDecoder
 
 
-defaultQry : Q.Params
-defaultQry =
+defaultQry : Session.Session -> Q.Params
+defaultQry session =
+  let
+    meParams =
+      case Session.viewer session of
+        Just viewer -> 
+          Viewer.email viewer
+          |> Email.toString
+          |> Q.string
+          |> Q.eq
+          |> Q.param "email"
+          |> List.singleton
+        Nothing -> []
+  in
   [ Q.select 
     [ Q.attribute "id"
     , Q.attribute "name"
@@ -116,6 +143,11 @@ defaultQry =
       [] (Q.attributes [ "fullname", "email", "legal_structure_name","pa_role"])
       , Q.resourceWithParams "uo"
       [] (Q.attributes ["coddesc","description"])
+    ----
+    , Q.resourceWithParams "authorizations"
+      meParams (Q.attributes [ "email"])
+    , Q.resourceWithParams "observers"
+      meParams (Q.attributes [ "email"])
     ]
   ]
 
@@ -125,6 +157,37 @@ update msg model =
     case msg of
         ISReceived data ->
             ( { model | data = data }, Cmd.none )
+
+        BookmarkMsg id ->
+              ( model, sendBookmark model id )
+
+        BookmarkedMsg (Result.Ok _) -> 
+          case model.data of
+            RemoteData.Success is_ ->
+              let
+                is = {is_ | observed = not is_.observed }
+              in
+              ( {model | data = RemoteData.Success is}, Cmd.none)
+            _ -> ( model, Cmd.none)
+          
+
+        BookmarkedMsg (Result.Err err) -> 
+          ( { model | error = Just <| UI.buildErrorMessage err }
+          , Cmd.none
+          )
+
+
+
+sendBookmark model id = 
+  case model.data of
+    RemoteData.Success d ->
+      let
+        bookmarked = d.observed
+      in
+        Api.sendBookmark BookmarkedMsg 
+          model.session bookmarked id
+
+    _ -> Cmd.none
 
 
 view : Model -> Html Msg
@@ -137,12 +200,8 @@ view model =
 viewIS : {m| session : Session.Model} -> DT ->  Html Msg 
 viewIS {session} data =
     let 
-        canEdit = 
-          case Session.viewer session.session of
-            Just _ -> True
-            Nothing -> False
         editHeader = 
-          if canEdit then
+          if Api.canEdit session.session data then
             [ div
               [ class "etichetta" ]
               [ UI.getIcon "it-pencil" []                    
@@ -155,6 +214,21 @@ viewIS {session} data =
             ]
           else
             []
+
+        bookmarkIcon = 
+          if data.observed
+            then "it-star-full"
+            else "it-star-outline"
+
+        bookmark = 
+          Maybe.map 
+            (\_ -> 
+              span  [ class "d-flex align-content-start flex-wrap" 
+                    , onClick <| BookmarkMsg data.id 
+                    ] 
+                    [ UI.getIcon bookmarkIcon [SvgAttr.class "icon-primary"] ])
+            (Session.viewer session.session)  
+          |> Maybe.withDefault (span [] [])
 
         isTitle = (InfoSysSummary.idToString data.id)
                               ++ "  -  " ++ data.name 
@@ -181,9 +255,9 @@ viewIS {session} data =
     in
     div [ class  "row" ]
     [ div [ class "col-12 col-lg-12" ]
-      [ div [ class "card-wrapper card-space" ]
-        [ div [class "card card-bg card-big"]
-          ( editHeader ++ 
+      [ div [ class "card-wrapper card-space"]
+        [ div [class "card card-bg card-big", style "padding" "10px"]
+          ( (bookmark :: editHeader) ++ 
             [ div [ class "card-body   text-start"]
               [ div [ class "row" ] 
                 [ div [class "col-1"] 

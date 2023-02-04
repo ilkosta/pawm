@@ -31,7 +31,7 @@ import Html.Events exposing (onInput)
 import Session.Viewer as Viewer
 import Http
 import Data.InfoSysSummary as InfoSysSummary exposing (InfoSysId)
-import Utils.Email
+import Svg.Attributes as SvgAttr
 import Data.Bookmark as Bookmark
 import RemoteData exposing (RemoteData(..))
 
@@ -246,84 +246,10 @@ sendBookmark model id =
           |> Maybe.map .observed
           |> Maybe.withDefault False
       in
-        if bookmarked 
-        then removeBookmark model.session id
-        else addBookmark model.session id
+        Api.sendBookmark BookmarkedMsg 
+          model.session bookmarked id
 
     _ -> Cmd.none
-
-addBookmark : Session.Model -> InfoSysSummary.InfoSysId -> Cmd Msg
-addBookmark session id = 
-  let
-    baseUrl = Session.getApi session |> Url.toString
-    headers = 
-      Api.apiConfig session.session
-      |> Api.configWithRepresentation
-      |> Api.apiSingleResult
-      |> Dict.toList
-      |> List.map (\(k,v) -> Http.header k v)
-    
-    url = baseUrl ++ "observers"
-
-    maybeViewer = Session.viewer session.session
-
-    data = 
-      Maybe.map Viewer.email maybeViewer
-      |> Maybe.withDefault Utils.Email.emptyEmail
-      |> Bookmark.Bookmark id
-
-    body = Bookmark.econder data
-  in
-  if data.email == Utils.Email.emptyEmail
-  then Cmd.none
-  else 
-    Http.request 
-      { method = "POST"
-      , headers = headers
-      , url = url
-      , body = Http.jsonBody body
-      , expect = Api.expectJson BookmarkedMsg Bookmark.decoder
-      , timeout = Nothing
-      , tracker = Nothing
-      }
-
-removeBookmark : Session.Model -> InfoSysSummary.InfoSysId -> Cmd Msg
-removeBookmark session id = 
-  let
-    baseUrl = Session.getApi session |> Url.toString
-    headers = 
-      Api.apiConfig session.session
-      |> Api.configWithRepresentation
-      |> Api.apiSingleResult
-      |> Dict.toList
-      |> List.map (\(k,v) -> Http.header k v)
-    
-    maybeViewer = Session.viewer session.session
-
-    emailStr = 
-      Maybe.map Viewer.email maybeViewer
-      |> Maybe.withDefault Utils.Email.emptyEmail
-      |> Email.toString
-
-    qry = 
-      [ Q.param "infosys_id" <| Q.eq <| Q.int <| InfoSysSummary.idToInt id
-      , Q.param "email" <| Q.eq <| Q.string emailStr
-      ] |> Q.toQueryString
-
-    url = baseUrl ++ "observers?" ++ qry
-
-    -- body = bookmarkEconder data
-  in
-  Http.request 
-    { method = "DELETE"
-    , headers = headers
-    , url = url
-    , body = Http.emptyBody
-    , expect = Api.expectJson BookmarkedMsg Bookmark.decoder
-    , timeout = Nothing
-    , tracker = Nothing
-    }
-
 
 -- VIEWS
 
@@ -356,12 +282,6 @@ viewSearchBar =
 
 viewInfoSystems : {a| filters: Filters, session: Session.Model} -> DT ->  Html Msg 
 viewInfoSystems {filters,session} data = 
-  let 
-    canEdit = 
-      case Session.viewer session.session of
-        Just _ -> True
-        Nothing -> False
-  in
   div [] 
   [ if Dict.isEmpty filters 
     then div[][]
@@ -377,7 +297,7 @@ viewInfoSystems {filters,session} data =
         ]
       ]
   , div [ class "row" ] 
-    (List.map (viewSingleInfoSys canEdit) data )
+    (List.map (viewSingleInfoSys session.session) data )
   ]
 
 viewFilter : FilterName -> FilterValue -> Html Msg
@@ -407,27 +327,27 @@ viewFilter k v =
     
 
 
-viewSingleInfoSys : Bool -> InfoSysSummary.InfoSysSummary ->  Html Msg 
-viewSingleInfoSys canEdit data  =
+viewSingleInfoSys : Session.Session -> InfoSysSummary.InfoSysSummary ->  Html Msg 
+viewSingleInfoSys session data  =
   let
-    canEdit_ = canEdit && data.authorized
-    -- TODO: ottenere gia' dal db l'indicazione 
-    --        se l'editazione e' abilitata per l'utente corrente
+
     editHeader = 
-      if canEdit_ then
-        [ div
-          [ class "etichetta"
+      if Api.canEdit session data 
+      then
+          [ div
+            [ class "etichetta"
+            ]
+            [ UI.getIcon "it-pencil" []                    
+            , a [ Route.href (Route.ISEdit data.id)]
+                [ text "Modifica" ]
+            , span -- per l'accessibilita' tramite screen reader
+              [ class "visually-hidden" ]
+              [ text ("modifica il sistema informativo " ++ data.name) ]
+            ]
           ]
-          [ UI.getIcon "it-pencil" []                    
-          , a [ Route.href (Route.ISEdit data.id)]
-              [ text "Modifica" ]
-          , span -- per l'accessibilita' tramite screen reader
-            [ class "visually-hidden" ]
-            [ text ("modifica il sistema informativo " ++ data.name) ]
-          ]
-        ]
-      else
-        []
+      else []
+
+
     isTitle = (InfoSysSummary.idToString data.id)
               ++ "  -  " ++ data.name 
 
@@ -437,9 +357,14 @@ viewSingleInfoSys canEdit data  =
       else "it-star-outline"
 
     bookmark = 
-      if canEdit 
-      then span [ onClick <| BookmarkMsg data.id ] [ UI.getIcon bookmarkIcon [] ]
-      else span [][]
+      Maybe.map 
+        (\_ -> 
+          span  [ class "d-flex align-content-start flex-wrap" 
+                , onClick <| BookmarkMsg data.id 
+                ] 
+                [ UI.getIcon bookmarkIcon [SvgAttr.class "icon-primary"] ])
+        (Session.viewer session)  
+      |> Maybe.withDefault (span [] [])
   in
 
     div
@@ -451,6 +376,7 @@ viewSingleInfoSys canEdit data  =
             ]
             [ div
                 [ class "card card-bg card-big border-bottom-card"
+                , style "padding" "10px"
                 ]
                 (editHeader ++ 
                 [ bookmark

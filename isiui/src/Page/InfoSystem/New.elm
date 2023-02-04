@@ -21,7 +21,7 @@ import Route
 import Session.Session as Session
 import Page.InfoSystem.Form exposing (infoSys2Form)
 import Data.InfoSysSummary as InfoSysSummary 
-import InfoSysSummary
+
 
 import Postgrest.Queries as Q
 import SingleSelect

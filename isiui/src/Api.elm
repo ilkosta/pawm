@@ -8,11 +8,18 @@ port module Api exposing
     , apiConfigToRequestConfig
     , apiSingleResult
     , expectJson
+    , canEdit
+    , sendBookmark
     -- , uoRemoteSearchAttrs
     -- , peopleRemoteSearchAttrs
     -- , loadPeople
     )
 
+import Email
+import Utils.Email
+import Utils.Email
+import Email
+import Data.InfoSysSummary as InfoSysSummary
 import Browser.Navigation as Nav
 import Http exposing (header)
 import Json.Decode as Decode
@@ -28,6 +35,7 @@ import SingleSelectRemote
 import Data.UO
 import Postgrest.Queries as Q
 import Url
+import Data.Bookmark as Bookmark
 
 apiConfigToRequestConfig : Dict.Dict String String -> RemoteData.Http.Config
 apiConfigToRequestConfig conf =
@@ -138,6 +146,11 @@ apiSingleResult conf =
   Dict.update "Accept" f conf 
   
 
+canEdit : Session.Session -> {a | authorized : Bool} -> Bool
+canEdit session data =
+    case Session.viewer session of
+      Just _ -> data.authorized
+      Nothing -> False
 
 configWithRepresentation : Dict.Dict String String -> Dict.Dict String String
 configWithRepresentation conf = 
@@ -179,6 +192,99 @@ expectJson toMsg decoder =
             Err err ->
               Err (Http.BadBody (Decode.errorToString err))
 
+
+
+
+sendBookmark : 
+  (Result Http.Error Bookmark.Bookmark -> msg)  
+  -> Session.Model 
+  -> Bool -- if already bookmarked
+  -> InfoSysSummary.InfoSysId 
+  -> Cmd msg
+sendBookmark msg session bookmarked id = 
+  if bookmarked 
+    then removeBookmark msg session id
+    else addBookmark msg session id
+
+addBookmark : 
+  (Result Http.Error Bookmark.Bookmark -> msg) 
+  -> Session.Model 
+  -> InfoSysSummary.InfoSysId 
+  -> Cmd msg
+addBookmark msg session id = 
+  let
+    baseUrl = Session.getApi session |> Url.toString
+    headers = 
+      apiConfig session.session
+      |> configWithRepresentation
+      |> apiSingleResult
+      |> Dict.toList
+      |> List.map (\(k,v) -> Http.header k v)
+    
+    url = baseUrl ++ "observers"
+
+    maybeViewer = Session.viewer session.session
+
+    data = 
+      Maybe.map Viewer.email maybeViewer
+      |> Maybe.withDefault Utils.Email.emptyEmail
+      |> Bookmark.Bookmark id
+
+    body = Bookmark.econder data
+  in
+  if data.email == Utils.Email.emptyEmail
+  then Cmd.none
+  else 
+    Http.request 
+      { method = "POST"
+      , headers = headers
+      , url = url
+      , body = Http.jsonBody body
+      , expect = expectJson msg Bookmark.decoder
+      , timeout = Nothing
+      , tracker = Nothing
+      }
+
+removeBookmark : 
+  (Result Http.Error Bookmark.Bookmark -> msg) 
+  -> Session.Model 
+  -> InfoSysSummary.InfoSysId 
+  -> Cmd msg
+removeBookmark msg session id = 
+  let
+    baseUrl = Session.getApi session |> Url.toString
+    headers = 
+      apiConfig session.session
+      |> configWithRepresentation
+      |> apiSingleResult
+      |> Dict.toList
+      |> List.map (\(k,v) -> Http.header k v)
+    
+    maybeViewer = Session.viewer session.session
+
+    emailStr = 
+      Maybe.map Viewer.email maybeViewer
+      |> Maybe.withDefault Utils.Email.emptyEmail
+      |> Email.toString
+
+    qry = 
+      [ Q.param "infosys_id" <| Q.eq <| Q.int <| InfoSysSummary.idToInt id
+      , Q.param "email" <| Q.eq <| Q.string emailStr
+      ] |> Q.toQueryString
+
+    url = baseUrl ++ "observers?" ++ qry
+
+    -- body = bookmarkEconder data
+  in
+  Http.request 
+    { method = "DELETE"
+    , headers = headers
+    , url = url
+    , body = Http.emptyBody
+    , expect = expectJson msg Bookmark.decoder
+    , timeout = Nothing
+    , tracker = Nothing
+    }
 
 ----- LocalStorage
 
