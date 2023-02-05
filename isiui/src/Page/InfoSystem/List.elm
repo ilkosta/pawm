@@ -52,6 +52,7 @@ type alias Model =
   , session : Session.Model
   -- , problems : List Problem.Problem
   , filters : Filters
+  , search : String
   , error : Maybe String
   }
 
@@ -63,6 +64,7 @@ type Msg
   | AddFilter FilterName FilterValue
   | RemoveFilter FilterName
   | SearchMsg String
+  | ClearSearchMsg
   | BookmarkMsg InfoSysSummary.InfoSysId
   | BookmarkedMsg (Result Http.Error Bookmark.Bookmark)
     
@@ -76,6 +78,7 @@ init session =
       { data = RemoteData.Loading
       , session = session
       , filters = Dict.empty
+      , search = ""
       , error = Nothing
       }
   in
@@ -172,9 +175,12 @@ update msg model =
           ( nM , fetchIS nM)
 
         SearchMsg txt ->
-          ( model
+          ( { model | search = txt }
           , search model.session txt
           )
+
+        ClearSearchMsg ->
+          ( {model | search = ""}, fetchIS model )
 
         BookmarkMsg id ->
           ( model, sendBookmark model id )
@@ -207,7 +213,7 @@ update msg model =
               )
 
 
-search : Session.Model -> String -> Cmd Msg
+search : Session.Model ->  String -> Cmd Msg
 search session q =
   let
     baseUrl = Session.getApi session |> Url.toString
@@ -263,13 +269,13 @@ view : Model -> Html Msg
 view model =
     div 
       [class "container mb-5 mt-5 pt-5"]
-      ( List.append [viewSearchBar] <|
+      ( List.append [viewSearchBar model.search] <|
         UI.viewRemoteData (List.singleton << (viewInfoSystems model)) model.data      
       )
       
 
-viewSearchBar : Html Msg
-viewSearchBar =
+viewSearchBar : String -> Html Msg
+viewSearchBar q =
   div [ class "form-group autocomplete-wrapper-big"]
   [ label [ for "searchbar", class "visually-hidden"] [text "Cerca tra i sistemi censiti"]
   , input 
@@ -278,9 +284,12 @@ viewSearchBar =
     , placeholder "Testo da cercare nei sistemi"
     , id "searchbar"
     , onInput SearchMsg
+    , value q
     ][]
   , span [ class "autocomplete-icon", attribute "aria-hidden" "true"] 
-    [ UI.getIcon "it-search" [] ]
+    [ UI.getIcon "it-search" []
+    , span[ onClick ClearSearchMsg , class "d-flex align-content-end flex-wrap" ] [ UI.getIcon "it-close" [] ]
+    ]
   ]
 
 
