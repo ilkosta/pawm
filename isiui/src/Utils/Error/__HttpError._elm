@@ -1,4 +1,4 @@
-module Utils.Error.HttpError exposing (buildErrorMessage)
+module Utils.Error._HttpError exposing (buildErrorMessage)
 
 import Http
 

@@ -143,10 +143,11 @@ type Msg
 initCurrentPage : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 initCurrentPage ( model, existingCmds ) =
     let
+        _ = Debug.log "sono nella initCurrentPage per " "."
         ( currentPage, mappedPageCmds ) =
           if Page.needAuth model.route && 
               Session.viewer model.session.session == Nothing
-          then (HomePage, Api.login ())
+          then (model.page, Cmd.map (\_ -> LoginMsg ) Cmd.none)
           else
             case model.route of
 
@@ -310,8 +311,29 @@ update msg model =
             ( { model | route = newRoute }, Cmd.none )
                 |> initCurrentPage
 
-        (LogoutMsg, _) -> (model, Api.logout ())
-        (LoginMsg, _) -> (model, Api.login ())
+        (LogoutMsg, _) -> 
+          let
+            m = 
+              { model 
+              | session = (\sM -> 
+                  {sM | session = Session.resetViewer sM.session }
+                ) model.session
+              }
+          in
+          ( m , Cmd.batch [ 
+              Api.logout () 
+            , Route.pushUrl Route.Home <| Session.navKey model.session.session
+            ] 
+          )
+        (LoginMsg, _) -> 
+          let _ = Debug.log "sto gestendo il msg LoginMsg" "" in
+          ( model
+          , Cmd.batch 
+            [ Api.login ()
+            -- then return to the current page (pointed by `model.route`)
+            , Route.pushUrl model.route <| Session.navKey model.session.session
+            ]
+          )
         -----------------------------
         ( GotSession session, _ ) ->
             -- forward the updated model.session 

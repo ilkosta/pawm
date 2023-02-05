@@ -24,33 +24,11 @@ const options = {
 
 const supabase = createClient(
   api_host,
-  // "http://localhost:3000",
   // public anonymous key of the supabase project (from dashboard)
   anon_key,
   options
 );
 
-
-// load of some constant resources into localstorage
-// async function loadResource(key, table) {
-//   let stored = localStorage.getItem(key);
-//   if (stored) {
-//     stored = JSON.parse(stored);
-//     let days_old = Math.floor((now - stored.at) / (1000 * 60 * 60 * 24));
-//     if (days_old > 30) {
-//       let { data: data, error } = await supabase
-//         .from(table)
-//         .select('*');
-
-//       if (error) {
-//         return console.error("Errore aggiornando le UO");
-//       }
-
-//       let uodata = { at: now, data: data };
-//       localStorage.setItem(key, JSON.stringify(uodata));
-//     }
-//   }
-// }
 
 
 

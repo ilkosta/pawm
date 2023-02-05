@@ -1,7 +1,8 @@
 module Session.Session exposing 
   ( Model
   , Session, ApiUrl, getApi, apiUrlDecoder
-  , cred, fromViewer, navKey, viewer)
+  , cred, fromViewer, navKey, viewer, resetViewer
+  )
 
 import Browser.Navigation as Nav
 import Session.Viewer as Viewer exposing (Viewer)
@@ -10,6 +11,7 @@ import Url
 import Utils.Url
 
 import Json.Decode as Decode
+import Html exposing (nav)
 
 
 -- TYPES
@@ -87,3 +89,6 @@ navKey session =
         Guest key ->
             key
 
+resetViewer : Session -> Session
+resetViewer s =
+  Guest <| navKey s
