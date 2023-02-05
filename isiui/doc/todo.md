@@ -18,7 +18,7 @@
   - [-] filtri rapidi per struttura o utente
   - [ ] paginazione
   - [ ] ricerca in linea
-  - [ ] possiblita' di aggiungersi/togliersi agli osservatori
+  - [x] possiblita' di aggiungersi/togliersi agli osservatori
 - [x] vista di dettaglio
   - [ ] elenco degli abilitati
   - [ ] elenco degli osservatori
@@ -26,6 +26,6 @@
   - [ ] modifica dell'elenco degli abilitati
   - [ ] vista dell'elenco degli osservatori
 - [x] vista di inserimento
-- [ ] verifica dell'esistenza della connessione
+- [-] verifica dell'esistenza della connessione : loggato dal serviceworker
 - [ ] utilizzo di risorse precaricate
 - [ ] ripulire per la build completa

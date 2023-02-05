@@ -78,7 +78,7 @@ fetchData session isID =
     url = 
       (Session.getApi session |> Url.toString) 
       ++ "info_system?" 
-      ++ (Q.toQueryString <| qry isID) |> Debug.log "url api modifica: "
+      ++ (Q.toQueryString <| qry isID) -- |> Debug.log "url api modifica: "
 
     reqConfig = 
       Api.apiConfig session.session
@@ -156,8 +156,9 @@ update msg model =
               , Session.navKey model.session.session
                 |> Route.pushUrl Route.ISList 
               )
+
             _ -> 
-              let _ = Debug.log "stato non previsto in fase di salvataggio" in 
+              -- let _ = Debug.log "stato non previsto in fase di salvataggio" in 
               (model,Cmd.none)
 
 
@@ -342,7 +343,7 @@ submit session f =
   let
     infosys = Form.form2infoSys f
 
-    _ = Debug.log "resp_inf" infosys.respInf
+    -- _ = Debug.log "resp_inf" infosys.respInf
 
     id = Maybe.map InfoSysSummary.idToInt infosys.id 
           |> Maybe.withDefault 0

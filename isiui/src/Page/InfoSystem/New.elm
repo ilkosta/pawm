@@ -115,7 +115,7 @@ update msg model =
                 |> Route.pushUrl Route.ISList 
               )
             _ -> 
-              let _ = Debug.log "stato non previsto in fase di salvataggio" in 
+              -- let _ = Debug.log "stato non previsto in fase di salvataggio" in 
               (model,Cmd.none)
 
 

@@ -6,7 +6,8 @@ import { createClient } from '@supabase/supabase-js';
 // import 'bootstrap-italia';
 
 const storageKey = "sb-localhost-auth-token";
-const api_host = "http://localhost:54321"
+// const api_host = "http://192.168.1.13:54321"
+const api_host = "http://localhost:54321";
 const api_url = api_host + "/rest/v1/";
 //const anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 const anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";

@@ -1,4 +1,4 @@
-build
+#build
 .elm-spa
 
 # Created by https://www.toptal.com/developers/gitignore/api/elm,visualstudiocode,node,kate,linux,vim

@@ -61,6 +61,14 @@ Per permettere la persistenza della sessione utente si sceglie di attivare una p
 La background api e' disponibile in tutti i browser **tranne safari**, ma il rinnovo in background e' un'ottimizzazione del meccanismo di mantenimento della sessione, quindi non preclude il funzionamento su tutte le piattaforme. Si preferisce usare comunque la `Background Api` piuttosto che i `WebWorker` (api maggiormente diffusa) perche' il codice da eseguire e' talmente piccolo che e' sconveniente istanziare un thread per eseguirlo, come farebbero invece i `WebWorker` che risulterebbero troppo pesanti.
 La chiamata alle `Background Api` rappresenta comunque una ridondanza perche' le funzionalita' di `supabase` prevedono gia' il rinnovo automatico del token alla scadenza (comportamento non di default ma attivato dalla configurazione corrente).
 
+
+Si sceglie:
+
+- di abilitare l'applicazione ai soli utenti interni all'organizzazione `unicam.it`
+- di permettere l'accesso al solo ambito `userinfo.email`, mentre nell'applicazione reale verrebbero estratte dal token di autenticazione piu' informazioni (es. codice fiscale).
+
+
+
 La verifica delle credenziali in corrispondenza di ogni richiesta di una pagina dietro autenticazione e' gestita in Elm da una unica funzione (in Main.elm) che esegue in fase di inizializzazione della pagina indicata dalla rotta corrente:
 
 ```elm
@@ -75,13 +83,13 @@ else
 
 ### autorizzazione - permessi
 
-Si sceglie:
-
-- di abilitare l'applicazione ai soli utenti interni all'organizzazione `unicam.it`
-- di permettere l'accesso al solo ambito `userinfo.email`, mentre nell'applicazione reale verrebbero estratte dal token di autenticazione piu' informazioni (es. codice fiscale).
-
 Ogni strato applicativo deve avere la garanzia che le informazioni vengono fornite e modificate in aderenza alle regole di cui sopra. 
+
+L'utilizzo di Postgrest permette di far giungere il token jwt al database che puo' quindi valutare se l'operazione richiesta dalla query e' permessa o meno in base ad una funzione di valutazione appositamente definita.
+
 Si sceglie quindi di posizionare la verifica dei permessi/autorizzazioni nel livello piu' basso possibile dell'applicativo, sul database, in modo che sia impossibile un utilizzo improprio dei dati.
+
+Lo strato piu' alto, quello della UI se vuole puo' utilizzare le informazioni sul database per suggerire le azioni permesse, ma la logica sara' dettata dai dati e le operazioni permesse sugli stessi a livello di database.
 
 Questa scelta ha come conseguenze:
 
@@ -90,6 +98,9 @@ Questa scelta ha come conseguenze:
   - il motore di ottimizzazione di Postgres tiene conto della visibilita' dei dati e del loro peso per valutare come eseguire le query complesse
 - piu' facile intercettare errori durante lo sviluppo o modifica dell'applicativo
 - unico punto in cui le regole vengono applicate e possono essere modificate
+- garanzia dell'utilizzo e manipolazione dei dati in accordo ai permessi concessi
+- tracciamento delle operazioni eseguite in deroga ai permessi concessi
+- ...
 
 ### motivo della scelta di Elm
 

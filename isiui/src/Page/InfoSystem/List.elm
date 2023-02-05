@@ -92,7 +92,7 @@ fetchIS {session, filters} =
     qry = 
       filteredList session.session filters 
       |> Q.toQueryString 
-    url = baseUrl ++ "info_system" ++ "?" ++ qry |> Debug.log "qry:"
+    url = baseUrl ++ "info_system" ++ "?" ++ qry -- |> Debug.log "qry:"
 
     reqConfig = 
       apiConfig session.session
