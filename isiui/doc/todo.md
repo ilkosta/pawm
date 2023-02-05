@@ -29,3 +29,4 @@
 - [-] verifica dell'esistenza della connessione : loggato dal serviceworker
 - [ ] utilizzo di risorse precaricate
 - [ ] ripulire per la build completa
+- [ ] usare uno stato/contesto condiviso (es. sessione etc.) invece che copiare i dati nei modelli delle singole pagine (vedi https://github.com/ohanhi/elm-shared-state, )

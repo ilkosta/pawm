@@ -89,6 +89,10 @@ navKey session =
         Guest key ->
             key
 
-resetViewer : Session -> Session
-resetViewer s =
-  Guest <| navKey s
+resetViewer : { m | session : Model } ->  { m | session : Model }
+resetViewer m =
+  { m | session = 
+    (\sm -> {sm | session = Guest <| navKey sm.session }) 
+    m.session 
+  }
+  

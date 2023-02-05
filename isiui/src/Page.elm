@@ -263,7 +263,7 @@ centralHeader page maybeViewer =
                                 , ul []
                                     [ li []
                                         [ a
-                                            [ href "https://github.com/ilkosta/pwam"
+                                            [ href "https://github.com/ilkosta/pawm"
                                             , attribute "aria-label" "Github"
                                             , HAttr.target "_blank"
                                             ]
@@ -279,28 +279,28 @@ centralHeader page maybeViewer =
                                         ]
                                     ]
                                 ]
-                            , div
-                                [ class "it-search-wrapper"
-                                ]
-                                [ span
-                                    [ class "d-none d-md-block"
-                                    ]
-                                    [ text "Cerca" ]
-                                , a
-                                    [ class "search-link rounded-icon"
-                                    , attribute "aria-label" "Cerca nel sito"
-                                    , href "#"
-                                    ]
-                                    [ svg
-                                        [ SvgAttr.class "icon"
-                                        ]
-                                        [ Svg.use
-                                            [ attribute "href" <| getSprite "it-search"
-                                            ]
-                                            []
-                                        ]
-                                    ]
-                                ]
+                            -- , div
+                            --     [ class "it-search-wrapper"
+                            --     ]
+                            --     [ span
+                            --         [ class "d-none d-md-block"
+                            --         ]
+                            --         [ text "Cerca" ]
+                            --     , a
+                            --         [ class "search-link rounded-icon"
+                            --         , attribute "aria-label" "Cerca nel sito"
+                            --         , href "#"
+                            --         ]
+                            --         [ svg
+                            --             [ SvgAttr.class "icon"
+                            --             ]
+                            --             [ Svg.use
+                            --                 [ attribute "href" <| getSprite "it-search"
+                            --                 ]
+                            --                 []
+                            --             ]
+                            --         ]
+                            --     ]
                             ]
                         ]
                     ]

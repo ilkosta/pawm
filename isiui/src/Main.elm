@@ -312,15 +312,8 @@ update msg model =
                 |> initCurrentPage
 
         (LogoutMsg, _) -> 
-          let
-            m = 
-              { model 
-              | session = (\sM -> 
-                  {sM | session = Session.resetViewer sM.session }
-                ) model.session
-              }
-          in
-          ( m , Cmd.batch [ 
+          ( Session.resetViewer model 
+          , Cmd.batch [ 
               Api.logout () 
             , Route.pushUrl Route.Home <| Session.navKey model.session.session
             ] 

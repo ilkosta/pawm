@@ -171,10 +171,22 @@ update msg model =
             _ -> ( model, Cmd.none)
           
 
-        BookmarkedMsg (Result.Err err) -> 
-          ( { model | error = Just <| UI.buildErrorMessage err }
-          , Cmd.none
-          )
+        BookmarkedMsg (Result.Err err) ->
+          let
+            commErr = 
+              ( { model | error = Just <| UI.buildErrorMessage err }
+              , Cmd.none
+              )
+          in
+          case model.data of
+            RemoteData.Success d -> 
+              case err of 
+                Http.BadStatus 401 ->
+                  Session.resetViewer model |> .session |> init d.id
+
+                _ -> commErr
+            _ -> commErr
+              
 
 
 
@@ -220,11 +232,18 @@ viewIS {session} data =
             then "it-star-full"
             else "it-star-outline"
 
+
+        bookmarkTitle = 
+          if data.observed then "smetti di osservare" else "osserva"
+
         bookmark = 
           Maybe.map 
             (\_ -> 
               span  [ class "d-flex align-content-start flex-wrap" 
                     , onClick <| BookmarkMsg data.id 
+                    , attribute "aria-label" bookmarkTitle
+                    , title bookmarkTitle
+                    , attribute "tabindex" "0"
                     ] 
                     [ UI.getIcon bookmarkIcon [SvgAttr.class "icon-primary"] ])
             (Session.viewer session.session)  
