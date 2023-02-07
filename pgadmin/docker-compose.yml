@@ -5,9 +5,9 @@ services:
     #image: fenglc/pgadmin4
     image: dpage/pgadmin4
     env_file: .env_pgadm
-    volumes:
-      - ./data:/data
-      - ./var:/var/lib/pgadmin
+      #volumes:
+      #- ./data:/data
+      #- ./var:/var/lib/pgadmin
       #- ./config_local.py:/pgadmin4/config_local.py:ro
     ports:
       - 4325:80

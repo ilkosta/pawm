@@ -30,3 +30,4 @@
 - [ ] utilizzo di risorse precaricate
 - [ ] ripulire per la build completa
 - [ ] usare uno stato/contesto condiviso (es. sessione etc.) invece che copiare i dati nei modelli delle singole pagine (vedi https://github.com/ohanhi/elm-shared-state, )
+- [ ] verificare la dimensione dello schermo e presentare un menu diverso per i mobile

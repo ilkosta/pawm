@@ -276,20 +276,24 @@ view model =
 
 viewSearchBar : String -> Html Msg
 viewSearchBar q =
-  div [ class "form-group autocomplete-wrapper-big"]
-  [ label [ for "searchbar", class "visually-hidden"] [text "Cerca tra i sistemi censiti"]
-  , input 
-    [ type_ "search"
-    , class "autocomplete"
-    , placeholder "Testo da cercare nei sistemi"
-    , id "searchbar"
-    , onInput SearchMsg
-    , value q
-    ][]
-  , span [ class "autocomplete-icon", attribute "aria-hidden" "true"] 
-    [ UI.getIcon "it-search" []
-    , span[ onClick ClearSearchMsg , class "d-flex align-content-end flex-wrap" ] [ UI.getIcon "it-close" [] ]
+  div [ class "row"]
+  [ div [ class "col-11"]
+    [ div [ class " form-group autocomplete-wrapper-big"]
+      [ label [ for "searchbar", class "visually-hidden"] [text "Cerca tra i sistemi censiti"]
+      , input 
+        [ type_ "search"
+        , class "autocomplete"
+        , placeholder "Testo da cercare nei sistemi"
+        , id "searchbar"
+        , onInput SearchMsg
+        , value q
+        ][]
+      , span [ class "autocomplete-icon", attribute "aria-hidden" "true"] 
+        [ UI.getIcon "it-search" []    
+        ]      
+      ]
     ]
+  , div [ class "col-1 text-start d-flex align-content-center flex-wrap" , onClick ClearSearchMsg ] [ UI.getIcon "it-close" [] ]
   ]
 
 

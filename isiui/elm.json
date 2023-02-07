@@ -9,6 +9,7 @@
         "direct": {
             "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "bellroy/elm-email": "1.0.1",
+            "dzuk-mutant/nice-screen-buckets": "4.0.1",
             "elm/browser": "1.0.2",
             "elm/core": "1.0.5",
             "elm/html": "1.0.0",
@@ -33,6 +34,9 @@
             "elm/virtual-dom": "1.0.3",
             "jinjor/elm-debounce": "3.0.0",
             "justinmimbs/timezone-data": "2.1.4",
+            "robinheghan/murmur3": "1.0.0",
+            "rtfeldman/elm-css": "17.1.1",
+            "rtfeldman/elm-hex": "1.0.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.4",
             "waratuman/time-extra": "1.1.0"
         }

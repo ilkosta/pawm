@@ -25,6 +25,8 @@ import Page exposing (Page(..))
 import Page.NotFound
 import Page.Home
 
+-- import Screen
+
 
 {-| NAVIGATION FLOW
 
@@ -56,6 +58,7 @@ type alias Model =
     { route : Route     -- current route
     , page : Page       -- current page
     , session : Session.Model
+    -- , screen : Screen
     }
 
 
@@ -97,6 +100,7 @@ init flags url navKey =
           { route = Route.parseUrl url
           , page = NotFoundPage -- FIXME: antipattern: fallback to 404
           , session = session
+          -- , screen = Screen
           }
     in
     initCurrentPage ( model, Cmd.none )    
