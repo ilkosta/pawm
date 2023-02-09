@@ -25,6 +25,8 @@ import Page exposing (Page(..))
 import Page.NotFound
 import Page.Home
 
+-- import Screen
+
 
 {-| NAVIGATION FLOW
 
@@ -56,6 +58,7 @@ type alias Model =
     { route : Route     -- current route
     , page : Page       -- current page
     , session : Session.Model
+    -- , screen : Screen
     }
 
 
@@ -68,7 +71,7 @@ type alias Model =
 * the Browser send the full URL entered by the user in address bar to the runtime
 * the Runtime convert the full URL to the `Url` type and send it to `init`
 * `init` extract the route from the `Url`
-* determine which page to display based on the current route and store that in the page filed
+* determine which page to display based on the current route and store that in the page field
 * return a fully initialized main model to the runtime
 
 `init` fn have two responsibilities:
@@ -97,6 +100,7 @@ init flags url navKey =
           { route = Route.parseUrl url
           , page = NotFoundPage -- FIXME: antipattern: fallback to 404
           , session = session
+          -- , screen = Screen
           }
     in
     initCurrentPage ( model, Cmd.none )    
@@ -143,7 +147,7 @@ type Msg
 initCurrentPage : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 initCurrentPage ( model, existingCmds ) =
     let
-        _ = Debug.log "sono nella initCurrentPage per " "."
+        -- _ = Debug.log "sono nella initCurrentPage per " "."
         ( currentPage, mappedPageCmds ) =
           if Page.needAuth model.route && 
               Session.viewer model.session.session == Nothing
@@ -319,7 +323,7 @@ update msg model =
             ] 
           )
         (LoginMsg, _) -> 
-          let _ = Debug.log "sto gestendo il msg LoginMsg" "" in
+          -- let _ = Debug.log "sto gestendo il msg LoginMsg" "" in
           ( model
           , Cmd.batch 
             [ Api.login ()

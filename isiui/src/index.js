@@ -2,11 +2,9 @@ import './main.css';
 import { Elm } from './Main.elm';
 import * as serviceWorker from './serviceWorker';
 import { createClient } from '@supabase/supabase-js';
-// import "./bootstrap-italia_v203/js/bootstrap-italia.bundle.min.js";
-// import 'bootstrap-italia';
 
 const storageKey = "sb-localhost-auth-token";
-// const api_host = "http://192.168.1.13:54321"
+
 const api_host = "http://localhost:54321";
 const api_url = api_host + "/rest/v1/";
 //const anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
@@ -131,4 +129,11 @@ app.ports.logout.subscribe(async () => {
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorker.unregister();
+// serviceWorker.unregister();
+serviceWorker.register();
+
+
+
+// const api_host = "http://192.168.1.13:54321"
+
+// const api_host = "https://localhost:3000";
