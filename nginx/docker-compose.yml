@@ -1,0 +1,15 @@
+version: '2.1'
+
+services:
+  proxy:
+    image: nginx:alpine
+    restart: unless-stopped
+    #env_file: .env_ssl
+    ports:
+    - 3000:443
+
+    volumes:
+    - ./conf:/etc/nginx/conf.d/:ro
+    #- ./data/hd:/var/www/hd/:ro
+    - ../isiui/build:/var/www/:ro
+
