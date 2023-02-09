@@ -55,11 +55,6 @@ encoder i =
       else Encode.string f
   in
   Encode.object <|
-    List.append
-      (case i.id of 
-          Just id -> [( "id" , sysIdEnc id)]
-          Nothing -> [])
-    
       [ ( "name", Encode.string i.name )
       , ( "description", Encode.string i.description )
       , ( "finality", optional i.finality )
