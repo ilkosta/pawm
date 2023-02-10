@@ -142,6 +142,10 @@ update msg model =
                     |> Cmd.batch
                   )
                 )
+
+              -- TODO: change ohanhi/remotedata-http
+              --        to permit the usage of `expectStringResponse` (https://package.elm-lang.org/packages/elm/http/latest/Http#expectStringResponse)
+              --        and get the response body of an API Error
               _ ->
                 ( { model 
                   | infosys = data 
@@ -362,6 +366,9 @@ submit session f =
       |> Api.apiConfigToRequestConfig
       
   in
+    -- TODO: change ohanhi/remotedata-http
+    --        to permit the usage of `expectStringResponse` (https://package.elm-lang.org/packages/elm/http/latest/Http#expectStringResponse)
+    --        and get the response body of an API Error
     case Session.viewer session.session of
       Just _ -> 
         RemoteData.Http.patchWithConfig reqConfig url

@@ -114,7 +114,11 @@ update msg model =
               , Session.navKey model.session.session
                 |> Route.pushUrl Route.ISList 
               )
-            _ -> 
+
+            -- TODO: change ohanhi/remotedata-http
+            --        to permit the usage of `expectStringResponse` (https://package.elm-lang.org/packages/elm/http/latest/Http#expectStringResponse)
+            --        and get the response body of an API Error
+            _ ->
               -- let _ = Debug.log "stato non previsto in fase di salvataggio" in 
               (model,Cmd.none)
 
@@ -293,6 +297,9 @@ submit session f =
       |> Api.apiConfigToRequestConfig
       
   in
+    -- TODO: change ohanhi/remotedata-http
+    --        to permit the usage of `expectStringResponse` (https://package.elm-lang.org/packages/elm/http/latest/Http#expectStringResponse)
+    --        and get the response body of an API Error
     case Session.viewer session.session of
       Just _ -> 
         RemoteData.Http.postWithConfig reqConfig url

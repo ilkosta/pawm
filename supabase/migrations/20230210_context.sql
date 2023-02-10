@@ -1,0 +1,59 @@
+-- disable insert/update for the context/external tables
+
+ALTER TABLE "public"."uo" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for all users" ON "public"."uo"
+AS PERMISSIVE FOR SELECT
+TO public
+USING (true) ;
+
+
+
+ALTER TABLE "public"."address_book" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for all users" ON "public"."address_book"
+AS PERMISSIVE FOR SELECT
+TO public
+USING (true) ;
+
+----------------
+
+ALTER TABLE "public"."observers" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for all users" ON "public"."observers"
+AS PERMISSIVE FOR SELECT
+TO public
+USING (true) ;
+
+CREATE POLICY "Enable insert for users based on email and authorizations table" ON "public"."observers"
+-- each user can select a system to observe
+-- so a user cannot indicate another user as observer
+-- with the exception of the user authorized to change a system (owner, etc.)
+AS PERMISSIVE FOR INSERT
+TO authenticated
+with check 
+  ( auth.jwt() ->> 'email' = email 
+    or exists (
+      select 1 
+      from public.authorizations a 
+      where a.infosys_id = infosys_id 
+        and a.email = email
+      )
+  );
+  
+
+CREATE POLICY "Enable update for users based on email" ON "public"."observers"
+AS PERMISSIVE FOR UPDATE
+TO authenticated
+USING (auth.jwt() ->> 'email' = email)
+WITH CHECK (auth.jwt() ->> 'email' = email);
+
+
+CREATE POLICY "Enable delete for users based on email" ON "public"."observers"
+AS PERMISSIVE FOR DELETE
+TO authenticated
+USING (auth.jwt() ->> 'email' = email);
+
+----------------
+
+

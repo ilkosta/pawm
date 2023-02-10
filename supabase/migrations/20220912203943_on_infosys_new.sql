@@ -10,29 +10,46 @@ CREATE OR REPLACE FUNCTION public.on_infosys_new()
 AS $BODY$
 BEGIN	
 	-- insert the author
-	if auth.jwt() != '{}'::jsonb then
-	else
-		INSERT INTO public.observers(infosys_id, email)
-		VALUES (new.id, auth.jwt() ->> 'email')
-		ON CONFLICT ON CONSTRAINT email_infosys_u
-		DO NOTHING;
-	end if;
-	
-	-- insert responsible
-	INSERT INTO public.observers(infosys_id, email)
-	VALUES (new.id, new.resp_email)
+	-- if auth.jwt() != '{}'::jsonb then
+	-- else
+	INSERT INTO public.authorizations(infosys_id, email)
+	VALUES (new.id, auth.jwt() ->> 'email')
 	ON CONFLICT ON CONSTRAINT email_infosys_u
 	DO NOTHING;
 	
+	INSERT INTO public.observers(infosys_id, email)
+	VALUES (new.id, auth.jwt() ->> 'email')
+	ON CONFLICT ON CONSTRAINT email_observer_infosys_u
+	DO NOTHING;
+		
+	-- end if;
+	
+	-- insert responsible
+	INSERT INTO public.authorizations(infosys_id, email)
+	VALUES (new.id, new.resp_email)
+	ON CONFLICT ON CONSTRAINT email_infosys_u
+	DO NOTHING;
+		
+	INSERT INTO public.observers(infosys_id, email)
+	VALUES (new.id, new.resp_email)
+	ON CONFLICT ON CONSTRAINT email_observer_infosys_u
+	DO NOTHING;
+	
 	-- insert inf. resp.
-	if new.resp_inf_email != '' then
-		INSERT INTO public.observers(infosys_id, email)
+	if new.resp_inf_email is not null then
+	
+		INSERT INTO public.authorizations(infosys_id, email)
 		VALUES (new.id, new.resp_inf_email)
 		ON CONFLICT ON CONSTRAINT email_infosys_u
 		DO NOTHING;
+		
+		INSERT INTO public.observers(infosys_id, email)
+		VALUES (new.id, new.resp_inf_email)
+		ON CONFLICT ON CONSTRAINT email_observer_infosys_u
+		DO NOTHING;
 	end if;
 	
-    RETURN NEW;
+	RETURN NEW;
 END;
 $BODY$;
 
