@@ -9,45 +9,57 @@ CREATE OR REPLACE FUNCTION public.on_infosys_new()
     VOLATILE NOT LEAKPROOF
 AS $BODY$
 BEGIN	
-	-- insert the author
-	-- if auth.jwt() != '{}'::jsonb then
-	-- else
+	------------------------------
+	-- authorizations
+	------------------------------
+	-- - author
+	-- - owner
+	-- - resp inf
 	INSERT INTO public.authorizations(infosys_id, email)
 	VALUES (new.id, auth.jwt() ->> 'email')
 	ON CONFLICT ON CONSTRAINT email_infosys_u
 	DO NOTHING;
 	
-	INSERT INTO public.observers(infosys_id, email)
-	VALUES (new.id, auth.jwt() ->> 'email')
-	ON CONFLICT ON CONSTRAINT email_observer_infosys_u
-	DO NOTHING;
-		
-	-- end if;
-	
-	-- insert responsible
 	INSERT INTO public.authorizations(infosys_id, email)
 	VALUES (new.id, new.resp_email)
 	ON CONFLICT ON CONSTRAINT email_infosys_u
 	DO NOTHING;
-		
-	INSERT INTO public.observers(infosys_id, email)
-	VALUES (new.id, new.resp_email)
-	ON CONFLICT ON CONSTRAINT email_observer_infosys_u
-	DO NOTHING;
 	
-	-- insert inf. resp.
 	if new.resp_inf_email is not null then
 	
 		INSERT INTO public.authorizations(infosys_id, email)
 		VALUES (new.id, new.resp_inf_email)
 		ON CONFLICT ON CONSTRAINT email_infosys_u
 		DO NOTHING;
-		
+	end if;
+	
+	
+	------------------------------
+	-- observers
+	------------------------------
+	-- - author
+	-- - owner
+	-- - resp inf
+	
+	INSERT INTO public.observers(infosys_id, email)
+	VALUES (new.id, auth.jwt() ->> 'email')
+	ON CONFLICT ON CONSTRAINT email_observer_infosys_u
+	DO NOTHING;
+	
+	INSERT INTO public.observers(infosys_id, email)
+	VALUES (new.id, new.resp_email)
+	ON CONFLICT ON CONSTRAINT email_observer_infosys_u
+	DO NOTHING;
+	
+	if new.resp_inf_email is not null then
+	
 		INSERT INTO public.observers(infosys_id, email)
 		VALUES (new.id, new.resp_inf_email)
 		ON CONFLICT ON CONSTRAINT email_observer_infosys_u
 		DO NOTHING;
 	end if;
+	
+	
 	
 	RETURN NEW;
 END;
@@ -65,12 +77,3 @@ GRANT EXECUTE ON FUNCTION public.on_infosys_new() TO anon;
 GRANT EXECUTE ON FUNCTION public.on_infosys_new() TO service_role;
 
 
-
-ALTER TABLE public.observers
-    ALTER COLUMN email TYPE text COLLATE pg_catalog."default";
-ALTER TABLE IF EXISTS public.observers
-    ALTER COLUMN email DROP DEFAULT;
-
-ALTER TABLE IF EXISTS public.observers
-    ALTER COLUMN email SET STORAGE EXTENDED;
-ALTER TABLE IF EXISTS public.observers DROP CONSTRAINT IF EXISTS user_email_fk;
