@@ -45,7 +45,10 @@ L'applicazione viene scelta come banco di prova per alcune tecnologie che si vuo
 
 Nel contesto in cui dovra' esistere l'applicazione il sistema di autenticazione  e' quello ufficiale dell'ente, federato SAML e SPID.
 
-Per l'esame di PAWM si sceglie di utilizzare l'autenticazione tramite OAuth basata sul Google IDS, in quanto l'ateneo e' registrato come organizzazione `unicam.it`, quindi tutti gli utenti hanno un account Google. 
+Poiche' l'ateneo e' registrato come organizzazione `unicam.it`, tutti gli utenti hanno un account Google, quindi si puo' utilizzare l'IDS di Google per autenticare gli utenti.
+
+Per l'esame di PAWM si sceglie di utilizzare l'autenticazione tramite il flusso `Authorization code grant ` di OAuth dove l'auth server e' l'api server di supabase che sfrutta l'auth token ottenuto dall'IDS di Google (il client_secret e' mantenuto nello schema auth di postgres).
+
 
 Usando quindi le credenziali `unicam.it` accedendo al portale di Google Cloud Platform si e' configurato un progetto a cui concedere il rilascio di credenziali [](https://supabase.com/docs/learn/auth-deep-dive/auth-google-oauth)
 
