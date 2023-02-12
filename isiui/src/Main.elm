@@ -98,7 +98,7 @@ init flags url navKey =
         |> Maybe.withDefault Utils.Url.emptyUrl
 
       session = Session.fromViewer apiUrl navKey viewer
-      (viewport, _) = Utils.Viewport.init
+      (viewport, viewportMsg) = Utils.Viewport.init
       model =
           { route = Route.parseUrl url
           , page = NotFoundPage -- FIXME: antipattern: fallback to 404
@@ -107,7 +107,7 @@ init flags url navKey =
           -- , screen = Screen
           }
     in
-    initCurrentPage ( model, Cmd.none )    
+    initCurrentPage ( model, Cmd.map ViewportMsg viewportMsg )    
 
 
 
