@@ -61,8 +61,6 @@ Per permettere la persistenza della sessione utente si sceglie di attivare una p
 - configuando `supabase` in modo che proceda autonomamente al rinnovo del token prima della scadenza
 - fallback: in background (tramite le `Background_Tasks_API`: https://developer.mozilla.org/en-US/docs/Web/API/Background_Tasks_API), per garantire la persistenza anche se l'applicativo e' in pausa
 
-La background api e' disponibile in tutti i browser **tranne safari**, ma il rinnovo in background e' un'ottimizzazione del meccanismo di mantenimento della sessione, quindi non preclude il funzionamento su tutte le piattaforme. Si preferisce usare comunque la `Background Api` piuttosto che i `WebWorker` (api maggiormente diffusa) perche' il codice da eseguire e' talmente piccolo che e' sconveniente istanziare un thread per eseguirlo, come farebbero invece i `WebWorker` che risulterebbero troppo pesanti.
-La chiamata alle `Background Api` rappresenta comunque una ridondanza perche' le funzionalita' di `supabase` prevedono gia' il rinnovo automatico del token alla scadenza (comportamento non di default ma attivato dalla configurazione corrente).
 
 
 Si sceglie:

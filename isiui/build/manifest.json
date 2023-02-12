@@ -6,6 +6,11 @@
       "src": "favicon.ico",
       "sizes": "192x192",
       "type": "image/png"
+    },
+    {
+      "src": "Elm_logo.svg",
+      "sizes": "any",
+      "type": "image/svg"
     }
   ],
   "start_url": "./index.html",

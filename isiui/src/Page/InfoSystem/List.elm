@@ -64,7 +64,7 @@ type Msg
   | AddFilter FilterName FilterValue
   | RemoveFilter FilterName
   | SearchMsg String
-  | ClearSearchMsg
+  -- | ClearSearchMsg
   | BookmarkMsg InfoSysSummary.InfoSysId
   | BookmarkedMsg (Result Http.Error Bookmark.Bookmark)
     
@@ -176,11 +176,12 @@ update msg model =
 
         SearchMsg txt ->
           ( { model | search = txt }
-          , search model.session txt
+          , if String.isEmpty txt then fetchIS model 
+            else search model.session txt
           )
 
-        ClearSearchMsg ->
-          ( {model | search = ""}, fetchIS model )
+        -- ClearSearchMsg ->
+        --   ( {model | search = ""}, fetchIS model )
 
         BookmarkMsg id ->
           ( model, sendBookmark model id )
@@ -293,7 +294,7 @@ viewSearchBar q =
         ]      
       ]
     ]
-  , div [ class "col-1 text-start d-flex align-content-center flex-wrap" , onClick ClearSearchMsg ] [ UI.getIcon "it-close" [] ]
+  -- , div [ class "col-1 text-start d-flex align-content-center flex-wrap" , onClick ClearSearchMsg ] [ UI.getIcon "it-close" [] ]
   ]
 
 

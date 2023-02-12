@@ -6,6 +6,8 @@ import { createClient } from '@supabase/supabase-js';
 const storageKey = "sb-localhost-auth-token";
 
 const api_host = "http://localhost:54321";
+// const api_host = "https://localhost:3000";
+
 const api_url = api_host + "/rest/v1/";
 //const anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 const anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
@@ -57,7 +59,6 @@ function renewToken() {
   if (!token)
     return;
 
-  // TODO : renew token
   let refresh_token = token.refresh_token;
 
   fetch(api_host + "/auth/v1/token?grant_type=refresh_token",

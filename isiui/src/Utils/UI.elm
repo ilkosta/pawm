@@ -76,8 +76,10 @@ buildErrorMessage httpError =
 
 isMobile : Viewport.Model -> Bool
 isMobile viewport =
-  Screen.isIn 
-    [ Screen.Bucket.handset, Screen.Bucket.portable] 
-    (Screen.Metrics.fromFloats viewport.width viewport.height )
+  if viewport.width == 0 then False
+  else
+    Screen.isIn 
+      [ Screen.Bucket.handset, Screen.Bucket.portable] 
+      (Screen.Metrics.fromFloats viewport.width viewport.height )
 
 
