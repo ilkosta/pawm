@@ -535,16 +535,29 @@ viewForm toMsg form =
           ]
         ]  
 
-      , div
-          [ class "d-grid gap-2 d-md-flex justify-content-md-end" ]
-          [ a
-              [ class "btn btn-lg btn-outline-primary pull-xs-left"
-              , Route.href Route.ISList
-              ]
-              [ text "Annulla" ]
-          , button
-              [ class "btn btn-lg btn-primary pull-xs-right"]
-              [ text "Salva" ]
+      -- , div
+      --     [ class "d-grid gap-2 d-md-flex justify-content-md-end" ]
+      --     [ a
+      --         [ class "btn btn-lg btn-outline-primary pull-xs-left"
+      --         , Route.href Route.ISList
+      --         ]
+      --         [ text "Annulla" ]
+      --     , button
+      --         [ class "btn btn-lg btn-primary pull-xs-right"]
+      --         [ text "Salva" ]
+      --     ]
+      , div [class "row mt-4"]
+        [ div [class "d-grid gap-2 d-md-flex  form-group col text-center"] 
+          [ a [ class "btn btn-outline-primary" , Route.href Route.ISList] 
+            [text "Annulla"]
+          , button [ class "btn btn-primary", onClick (toMsg SubmittedForm)] 
+            [ text "Salva" ]
+          -- , div [ class "row" ][ p [][]]
+          
           ]
+        ]
+        -- fallback to enable `save` if the mobile navbar is enabled
+        , div [ class "row" ][ p [][]]
+        , div [ class "row" ][ p [][]]
       ]
       

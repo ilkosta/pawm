@@ -1,6 +1,8 @@
 module Page.InfoSystem.Details exposing ( Model
   , Msg
-  , init, update, view, subscriptions)
+  , init, update, view, subscriptions
+  , mobileActions
+  )
 
 import Data.InfoSystem as InfoSystem
 import Data.Person exposing (Person)
@@ -202,6 +204,62 @@ sendBookmark model id =
     _ -> Cmd.none
 
 
+mobileActions : Model -> List (Html Msg)
+mobileActions model =
+  let
+    canEdit = 
+      case model.data of 
+        RemoteData.Success dt -> Api.canEdit model.session.session dt
+        _ -> False
+
+    bookmarkIcon = 
+      RemoteData.toMaybe model.data
+      |> Maybe.map (\d -> 
+        if d.observed
+        then "it-star-full"
+        else "it-star-outline")
+      |> Maybe.withDefault ""
+    -- bookmarkTitle = 
+    --   RemoteData.toMaybe model.data
+    --   |> Maybe.map (\d -> 
+    --       if d.observed 
+    --       then "smetti di osservare" 
+    --       else "osserva")
+    --   |> Maybe.withDefault ""
+    
+    bookmark = 
+      RemoteData.toMaybe model.data
+      |> Maybe.map (\d -> 
+          Maybe.map 
+            (\_ -> 
+              [ li [ onClick <| BookmarkMsg d.id ]
+                [ UI.getIcon bookmarkIcon [SvgAttr.class "icon-primary"]
+                -- , text bookmarkTitle 
+                ]
+              ]
+            )
+            (Session.viewer model.session.session)            
+          |> Maybe.withDefault ([])
+        )
+      |> Maybe.withDefault ([])
+
+    edit = 
+      if canEdit
+        then 
+          case model.data of 
+            RemoteData.Success dt -> 
+              [ li [] 
+                [ a [ Route.href (Route.ISEdit dt.id)]
+                  [ UI.getIcon "it-pencil" []
+                  , text "modifica"
+                  ]
+                ]
+              ]
+            _ -> []
+        else []
+  in
+    bookmark ++ edit
+
 view : Model -> Html Msg
 view model =
     div 
@@ -315,6 +373,8 @@ viewIS {session} data =
         ]
       ]
     ]
+
+
 
 
 {-| 

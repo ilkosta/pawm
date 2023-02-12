@@ -58,17 +58,19 @@ viewPage : Viewport.Model
             -> Maybe Viewer 
             -> Page 
             
-            -> { title : String, content : List (Html msg) } 
+            -> { title : String, content : List (Html msg) }
+            -> List (Html msg)
             -> Document msg
 viewPage 
-  viewport accessMsg maybeViewer page  { title, content }   
+  viewport accessMsg maybeViewer page  { title, content } 
+  mobileActions  
   =
     { title = "ISI - " ++ title
     , body = 
       ( if isMobile viewport
         then (viewHeader page maybeViewer accessMsg) ++ 
                content ++
-                 (mobileNav page maybeViewer)
+                 (mobileNav page maybeViewer mobileActions)
         else 
           (viewHeader page maybeViewer accessMsg) 
           ++ content
@@ -152,8 +154,8 @@ loginBtn maybeViewer (loginMsg,logoutMsg) =
       ]
     ]
   
-mobileNav : Page -> Maybe Viewer ->  List (Html msg)
-mobileNav currPage maybeViewer =
+mobileNav : Page -> Maybe Viewer -> List (Html msg) ->  List (Html msg)
+mobileNav currPage maybeViewer mobileActions =
   let
     linkTo = mobileNavbarLink currPage
     pubLinks = 
@@ -161,7 +163,7 @@ mobileNav currPage maybeViewer =
       , linkTo Route.ISList "Elenco" "it-list"      
       ]
     privateLinks = 
-      [ linkTo Route.ISNew "Nuovo" "it-plust-circle"      
+      [ linkTo Route.ISNew "Nuovo" "it-plus-circle"      
       ]
     links = 
       if maybeViewer == Nothing 
@@ -170,7 +172,7 @@ mobileNav currPage maybeViewer =
 
   in
     [ nav [ class "bottom-nav" ]
-      [ ul [] links ]
+      [ ul [] (links ++ mobileActions) ]
     ]
 
 

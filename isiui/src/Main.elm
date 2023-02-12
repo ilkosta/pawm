@@ -247,13 +247,13 @@ view model =
           viewPage NotFoundPage 
           { title = "mmm"
           , content = [Page.NotFound.view]
-          }
+          } []
           
         HomePage -> 
           viewPage HomePage
           { title = "Home"
           , content = [Page.Home.view]
-          }
+          } []
 
         ListPage pageModel ->
           viewPage (ListPage pageModel)
@@ -261,7 +261,8 @@ view model =
           , content =  [ ListInfoSys.view pageModel
                       |> Html.map ListPageMsg 
                     ]
-          }
+          } []
+          
 
         ISNewPage pageModel ->
           viewPage (ISNewPage pageModel)
@@ -269,7 +270,7 @@ view model =
           , content = [ ISNew.view pageModel
                         |> Html.map ISNewPageMsg
                       ]
-          }
+          } []
 
         ISEditPage pageModel ->
           viewPage (ISEditPage pageModel)
@@ -277,7 +278,10 @@ view model =
           , content =  [ ISEdit.view pageModel
                       |> Html.map ISEditPageMsg
                     ]                    
-          }
+          } []
+          -- ( ISEdit.mobileActions pageModel
+          --   |> Html.map ISEditPageMsg
+          -- )
 
         ISDetailsPage pageModel ->
           viewPage (ISDetailsPage pageModel)
@@ -285,7 +289,10 @@ view model =
           , content =  [ ISDetails.view pageModel
                       |> Html.map ISDetailsPageMsg
                     ]                    
-          }
+          } 
+          ( ISDetails.mobileActions pageModel 
+            |> List.map (Html.map ISDetailsPageMsg)
+          )
 
 ---- UPDATE the page model   
 
@@ -370,10 +377,11 @@ update msg model =
 
         -----------------------------
         -- viewport mapping
-        ( ViewportMsg subMsg, ListPage pageModel ) ->
+        ( ViewportMsg subMsg, _ ) ->
             let
                 ( updatedModel, updatedCmd ) =
                     Utils.Viewport.update subMsg model.viewport
+                -- _ = Debug.log "viewport updated" ""
             in
             ( { model | viewport = updatedModel }
             , Cmd.map ViewportMsg updatedCmd
