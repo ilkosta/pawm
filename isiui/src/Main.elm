@@ -24,6 +24,7 @@ import Page exposing (Page(..))
 ---  pages
 import Page.NotFound
 import Page.Home
+import Utils.Viewport
 
 -- import Screen
 
@@ -57,6 +58,7 @@ main =
 type alias Model =
     { route : Route     -- current route
     , page : Page       -- current page
+    , viewport : Utils.Viewport.Model
     , session : Session.Model
     -- , screen : Screen
     }
@@ -96,10 +98,12 @@ init flags url navKey =
         |> Maybe.withDefault Utils.Url.emptyUrl
 
       session = Session.fromViewer apiUrl navKey viewer
+      (viewport, _) = Utils.Viewport.init
       model =
           { route = Route.parseUrl url
           , page = NotFoundPage -- FIXME: antipattern: fallback to 404
           , session = session
+          , viewport = viewport
           -- , screen = Screen
           }
     in
@@ -121,20 +125,30 @@ init flags url navKey =
      (see `initCurrentPage` comments for the Msg remapping/construction)
 -}
 type Msg
-    = LinkClicked UrlRequest
+    = NoOp
+    | LinkClicked UrlRequest
     | UrlChanged Url
     | LoginMsg
     | LogoutMsg
     ---- js events
     | GotSession Session.Model
     ---- page events
+    | ViewportMsg Utils.Viewport.Msg
     | ListPageMsg ListInfoSys.Msg
     | ISNewPageMsg ISNew.Msg
     | ISEditPageMsg ISEdit.Msg
     | ISDetailsPageMsg ISDetails.Msg
     
 
-
+-- pageToMsg : Page -> msg -> Msg
+-- pageToMsg p m =
+--   case p of
+--    Page.NotFoundPage -> NoOp
+--    Page.HomePage -> NoOp
+--    Page.ListPage _ ->  ListPageMsg m
+--    Page.ISNewPage _ -> ISNewPageMsg m
+--    Page.ISEditPage _ -> ISEditPageMsg m
+--    Page.ISDetailsPage _ -> ISDetailsPageMsg m
 
 {-| Determine which page to display based on route.
 
@@ -226,7 +240,7 @@ view : Model -> Document Msg
 view model =
   let
     viewer = Session.viewer model.session.session
-    viewPage = Page.viewPage (LoginMsg,LogoutMsg) viewer
+    viewPage = Page.viewPage model.viewport (LoginMsg,LogoutMsg) viewer
   in
     case model.page of
         NotFoundPage ->
@@ -353,7 +367,19 @@ update msg model =
                 
             in            
             ( {model | session = session , page = updatedPage }, Cmd.none) 
-            
+
+        -----------------------------
+        -- viewport mapping
+        ( ViewportMsg subMsg, ListPage pageModel ) ->
+            let
+                ( updatedModel, updatedCmd ) =
+                    Utils.Viewport.update subMsg model.viewport
+            in
+            ( { model | viewport = updatedModel }
+            , Cmd.map ViewportMsg updatedCmd
+            )
+
+
         -----------------------------
         -- page mapping
 
@@ -446,7 +472,10 @@ subscriptions model =
   in
   
   Sub.batch
-    [ tokenUpdate GotSession , pagesMgs]
+    [ tokenUpdate GotSession 
+    , pagesMgs
+    , Sub.map ViewportMsg (Utils.Viewport.subs model.viewport)
+    ]
 
   
 

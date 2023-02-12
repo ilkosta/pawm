@@ -1,6 +1,6 @@
 module Utils.UI exposing 
   ( getIcon, getSprite, viewRemoteData
-  , buildErrorMessage
+  , buildErrorMessage, isMobile
   )
 
 import Html exposing (Html, a, button, div, li, nav, p, span, text, ul,h3)
@@ -13,6 +13,12 @@ import Svg.Attributes as SvgAttr
 
 import RemoteData exposing (RemoteData)
 import Http
+
+import Utils.Viewport as Viewport
+import Screen.Metrics
+import Screen.Bucket
+import Screen
+
 
 getIcon name attr = 
   let
@@ -65,5 +71,13 @@ buildErrorMessage httpError =
         Http.BadBody message ->
           "Ops! ho ricevuto una risposta che non mi aspettavo: " ++ 
             message
+
+
+
+isMobile : Viewport.Model -> Bool
+isMobile viewport =
+  Screen.isIn 
+    [Screen.Bucket.handset, Screen.Bucket.portable] 
+    (Screen.Metrics.fromFloats viewport.width viewport.height )
 
 

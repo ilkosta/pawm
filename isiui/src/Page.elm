@@ -17,8 +17,11 @@ import Page.InfoSystem.Edit as ISEdit
 import Page.InfoSystem.New as ISNew
 import Page.InfoSystem.Details as ISDetails
 
+import Utils.Viewport as Viewport
 
 import Session.Viewer exposing (Viewer)
+
+
 
 type Page
     = NotFoundPage
@@ -27,6 +30,7 @@ type Page
     | ISNewPage ISNew.Model
     | ISEditPage ISEdit.Model
     | ISDetailsPage ISDetails.Model
+
 
 
 needAuth : Route -> Bool
@@ -40,7 +44,6 @@ needAuth route =
       Route.ISDetails _ -> False
 
 
-
 {-| Take a page's Html and frames it with a header and footer.
 
 The caller provides the current user, so we can display in either
@@ -50,18 +53,26 @@ isLoading is for determining whether we should show a loading spinner
 in the header. (This comes up during slow page transitions.)
 
 -}
-viewPage : (msg,msg)
+viewPage : Viewport.Model
+            -> (msg,msg)
             -> Maybe Viewer 
             -> Page 
             
             -> { title : String, content : List (Html msg) } 
             -> Document msg
-viewPage accessMsg maybeViewer page  { title, content } =
+viewPage 
+  viewport accessMsg maybeViewer page  { title, content }   
+  =
     { title = "ISI - " ++ title
     , body = 
-        List.append 
-          (viewHeader page maybeViewer accessMsg)
-          content
+      ( if isMobile viewport
+        then (viewHeader page maybeViewer accessMsg) ++ 
+               content ++
+                 (mobileNav page maybeViewer)
+        else 
+          (viewHeader page maybeViewer accessMsg) 
+          ++ content
+      )
     }
 
 viewHeader : Page -> Maybe Viewer -> (msg,msg) -> List (Html msg)
@@ -141,6 +152,27 @@ loginBtn maybeViewer (loginMsg,logoutMsg) =
       ]
     ]
   
+mobileNav : Page -> Maybe Viewer ->  List (Html msg)
+mobileNav currPage maybeViewer =
+  let
+    linkTo = mobileNavbarLink currPage
+    pubLinks = 
+      [ linkTo Route.Home "Home" "it-pa"
+      , linkTo Route.ISList "Elenco" "it-list"      
+      ]
+    privateLinks = 
+      [ linkTo Route.ISNew "Nuovo" "it-plust-circle"      
+      ]
+    links = 
+      if maybeViewer == Nothing 
+      then pubLinks
+      else (pubLinks ++ privateLinks)
+
+  in
+    [ nav [ class "bottom-nav" ]
+      [ ul [] links ]
+    ]
+
 
 navPages : Page -> Maybe Viewer -> List (Html msg)
 navPages currPage maybeViewer =
@@ -176,6 +208,16 @@ isActivePage page route =
     _ -> 
         False 
 
+
+mobileNavbarLink : Page -> Route -> String -> String -> Html msg
+mobileNavbarLink page route lnkText ico =
+  let
+    attributes = [Route.href route]
+  in
+  if isActivePage page route then
+      li  [] [ a  ((class "active") :: attributes)  [ Utils.UI.getIcon ico [],  text lnkText ] ]
+    else
+      li  [] [ a attributes [ Utils.UI.getIcon ico [], text lnkText ] ]
 
 navbarLink : Page -> Route -> String -> Html msg
 navbarLink page route lnkText =
@@ -279,28 +321,6 @@ centralHeader page maybeViewer =
                                         ]
                                     ]
                                 ]
-                            -- , div
-                            --     [ class "it-search-wrapper"
-                            --     ]
-                            --     [ span
-                            --         [ class "d-none d-md-block"
-                            --         ]
-                            --         [ text "Cerca" ]
-                            --     , a
-                            --         [ class "search-link rounded-icon"
-                            --         , attribute "aria-label" "Cerca nel sito"
-                            --         , href "#"
-                            --         ]
-                            --         [ svg
-                            --             [ SvgAttr.class "icon"
-                            --             ]
-                            --             [ Svg.use
-                            --                 [ attribute "href" <| getSprite "it-search"
-                            --                 ]
-                            --                 []
-                            --             ]
-                            --         ]
-                            --     ]
                             ]
                         ]
                     ]
