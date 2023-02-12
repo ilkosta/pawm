@@ -234,7 +234,7 @@ mobileActions model =
             (\_ -> 
               [ li [ onClick <| BookmarkMsg d.id ]
                 [ UI.getIcon bookmarkIcon [SvgAttr.class "icon-primary"]
-                -- , text bookmarkTitle 
+                , text "Osserva"
                 ]
               ]
             )
@@ -251,7 +251,7 @@ mobileActions model =
               [ li [] 
                 [ a [ Route.href (Route.ISEdit dt.id)]
                   [ UI.getIcon "it-pencil" []
-                  , text "modifica"
+                  , text "Modifica"
                   ]
                 ]
               ]
